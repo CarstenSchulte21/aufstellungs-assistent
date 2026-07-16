@@ -1,97 +1,93 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { loadTeams, loadMatrix } from "@/lib/matrix";
+import MatrixShell from "@/components/MatrixShell";
 
-// Immer frisch laden, nie statisch cachen (Health-Check gegen die DB).
 export const dynamic = "force-dynamic";
 
-type Mannschaft = {
-  nummer: number;
-  name: string;
-  liga: string | null;
-  spielstaerke: number;
-};
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: { team?: string };
+}) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-async function ladeMannschaften(): Promise<
-  { ok: true; daten: Mannschaft[] } | { ok: false; fehler: string }
-> {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  ) {
-    return {
-      ok: false,
-      fehler:
-        "Keine Supabase-Zugangsdaten gefunden. Trage NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local ein.",
-    };
+  // Profil + Rollen
+  const { data: profil } = await supabase
+    .from("benutzer")
+    .select("spieler_id, rollen, mf_von_mannschaften")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // DSGVO-Gate: verknüpfte Spieler ohne Einwilligung zuerst einwilligen lassen
+  if (profil?.spieler_id) {
+    const { data: sp } = await supabase
+      .from("spieler")
+      .select("dsgvo_einwilligung_am")
+      .eq("id", profil.spieler_id)
+      .maybeSingle();
+    if (sp && !sp.dsgvo_einwilligung_am) redirect("/einwilligung");
   }
 
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("mannschaften")
-      .select("nummer, name, liga, spielstaerke")
-      .order("nummer", { ascending: true });
+  const teams = await loadTeams(supabase);
 
-    if (error) return { ok: false, fehler: error.message };
-    return { ok: true, daten: (data ?? []) as Mannschaft[] };
-  } catch (e) {
-    return { ok: false, fehler: e instanceof Error ? e.message : String(e) };
+  if (teams.length === 0) {
+    return (
+      <EmptyLayout email={user.email ?? ""}>
+        <p className="font-medium text-slate-700">Noch keine Daten vorhanden.</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Es sind noch keine Mannschaften angelegt. Sobald Spielplan und Meldung
+          erfasst sind, erscheint hier die Saison-Matrix.
+        </p>
+      </EmptyLayout>
+    );
   }
-}
 
-export default async function Home() {
-  const ergebnis = await ladeMannschaften();
+  const requested = searchParams.team;
+  const selectedTeamId =
+    teams.find((t) => t.id === requested)?.id ?? teams[0].id;
+
+  const matrix = await loadMatrix(supabase, selectedTeamId);
+
+  const rollen: string[] = (profil?.rollen as string[] | null) ?? [];
 
   return (
-    <main className="min-h-screen">
+    <MatrixShell
+      teams={teams}
+      matrix={matrix}
+      selectedTeamId={selectedTeamId}
+      userEmail={user.email ?? ""}
+      rollen={rollen}
+    />
+  );
+}
+
+function EmptyLayout({
+  email,
+  children,
+}: {
+  email: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <main className="min-h-screen bg-slate-50">
       <header className="bg-primary text-white">
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          <h1 className="text-xl font-semibold">Aufstellungs-Assistent</h1>
-          <p className="text-sm text-white/80">
-            Spieltag-Planung für unsere Tischtennis-Mannschaften
-          </p>
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg">
+            🏓
+          </div>
+          <div className="mr-auto text-[15px] font-bold">Aufstellungs-Assistent</div>
+          <span className="text-[12px] text-blue-200">{email}</span>
         </div>
       </header>
-
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-base font-semibold text-gray-900">
-            Datenbank-Verbindung
-          </h2>
-
-          {ergebnis.ok ? (
-            <div>
-              <p className="mb-4 text-sm text-green-700">
-                ✓ Verbindung zu Supabase steht. {ergebnis.daten.length} Mannschaften
-                geladen.
-              </p>
-              <ul className="divide-y divide-gray-100 rounded-md border border-gray-100">
-                {ergebnis.daten.map((m) => (
-                  <li
-                    key={m.nummer}
-                    className="flex items-center justify-between px-3 py-2 text-sm"
-                  >
-                    <span className="font-medium text-gray-900">
-                      {m.nummer}. {m.name}
-                    </span>
-                    <span className="text-gray-500">
-                      {m.liga} · {m.spielstaerke}er
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-              <p className="font-medium">Noch keine Verbindung.</p>
-              <p className="mt-1">{ergebnis.fehler}</p>
-            </div>
-          )}
-        </section>
-
-        <p className="mt-6 text-xs text-gray-400">
-          Meilenstein 1 — Projektgerüst &amp; Datenbank. Die Screens folgen ab
-          Meilenstein 2.
-        </p>
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          {children}
+        </div>
       </div>
     </main>
   );

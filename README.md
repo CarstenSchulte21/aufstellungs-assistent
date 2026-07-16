@@ -121,11 +121,72 @@ Demo-Spielplan, **die 6 Mannschaften bleiben erhalten**.
 
 ---
 
-## Offener Punkt für Meilenstein 2
+---
 
-Freitext-Spalten (`verfuegbarkeiten.kommentar`, `abwesenheiten.grund`,
-`kader_status.notiz`) sind laut SPEC A.6 sensibel und sollen anderen Spielern
-verborgen bleiben. RLS wirkt aber nur zeilen-, nicht spaltenweise. Diese
-Spalten-Maskierung wird beim Bau der Saison-Matrix (S3) über eine gezielte
-Datenbank-View umgesetzt. Der sensible Nachrichten-Store (`nachrichten`) ist
-bereits jetzt vollständig abgeschottet.
+# Meilenstein 2 — Login & Saison-Matrix
+
+Neu gebaut: Anmeldung per E-Mail-Link (S1) mit DSGVO-Einwilligung beim ersten
+Login und die Saison-Matrix (S3) gegen die echte Datenbank — Mannschafts-
+Umschalter, Statuschips, Zähler „Zusagen/benötigt" mit Warnfarbe, Filter „nur
+Lücken", Kommentar-Historie am Chip und Live-Aktualisierung.
+
+## Einrichtung Meilenstein 2 — Schritt für Schritt
+
+### 1. Neue Migrationen einspielen
+
+Im Supabase **SQL Editor** nacheinander ausführen:
+
+1. `supabase/migrations/0003_auth_profile.sql` → **Run**. (Legt das
+   automatische Benutzerprofil beim Login an, die DSGVO-Funktion, die
+   Kommentar-Maskierung und schaltet Live-Updates frei.)
+2. `supabase/migrations/0004_grants.sql` → **Run**. (Gibt den Rollen die
+   Grund-Berechtigung auf den Tabellen frei. Ohne diese zeigt die App trotz
+   Login „keine Daten", weil die Zeilen-Regeln allein nicht ausreichen.)
+
+### 2. Anmelde-Adressen in Supabase konfigurieren
+
+Dashboard → **Authentication** → **URL Configuration**:
+
+- **Site URL:** `http://localhost:3000`
+- **Redirect URLs:** `http://localhost:3000/**` hinzufügen
+
+(Die Vercel-Adresse kommt später dazu, sobald deployt.)
+
+### 3. App starten und anmelden
+
+```bash
+npm run dev
+```
+
+[http://localhost:3000](http://localhost:3000) öffnen → du wirst zur Anmeldung
+geleitet. E-Mail eintragen → du bekommst einen Link per Mail → anklicken →
+du landest in der Saison-Matrix.
+
+### 4. Dich selbst zum Admin/Mannschaftsführer machen (optional, empfohlen)
+
+Nach deinem ersten Login existiert dein Benutzerprofil. Im SQL Editor ausführen
+(deine E-Mail ist bereits eingesetzt):
+
+```sql
+update benutzer
+set rollen = array['admin','mannschaftsfuehrer','spieler']::rolle_typ[],
+    mf_von_mannschaften = (select array_agg(id) from mannschaften)
+where id = (select id from auth.users where email = 'carsten.schulte@gmail.com');
+```
+
+Danach in der App einmal neu laden.
+
+**Abnahme:** Du meldest dich per Mail-Link an und siehst die Matrix aller 6
+Mannschaften mit Demo-Daten — auch auf dem Handy.
+
+> Hinweis zur DSGVO-Einwilligung: Der Einwilligungs-Dialog erscheint nur, wenn
+> dein Login mit einem Spieler verknüpft ist (gleiche E-Mail). Deine echte
+> Adresse gehört zu keinem Demo-Spieler, daher geht es für dich direkt zur
+> Matrix. Der Dialog selbst ist gebaut und greift für echte Spieler.
+
+## Gelöst: Kommentar-Maskierung (offener Punkt aus M1)
+
+Die sensiblen Freitext-Kommentare (`verfuegbarkeiten.kommentar`) werden jetzt
+über die View `v_verfuegbarkeiten` maskiert: Nur der Spieler selbst, sein
+Mannschaftsführer und der Admin sehen den Text — alle anderen sehen in der
+Matrix nur den Status. Die Matrix liest ausschließlich über diese View.
