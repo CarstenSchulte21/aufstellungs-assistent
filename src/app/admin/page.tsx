@@ -43,6 +43,17 @@ export default async function AdminPage() {
               Sperrvermerk, RES) erfassen.
             </p>
           </a>
+          <a
+            href="/admin/fuehrung"
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary"
+          >
+            <div className="text-base font-bold text-slate-900">
+              🧑‍🏫 Mannschaftsführung
+            </div>
+            <p className="mt-1 text-sm text-slate-500">
+              Mannschaftsführer und Stellvertreter je Mannschaft festlegen.
+            </p>
+          </a>
         </div>
         <p className="mt-6 text-[12px] text-slate-400">
           Diese Bereiche sind nur für Admins sichtbar.

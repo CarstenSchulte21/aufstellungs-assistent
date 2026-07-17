@@ -18,16 +18,28 @@ export async function getSession(): Promise<SessionInfo | null> {
   if (!user) return null;
   const { data: profil } = await supabase
     .from("benutzer")
-    .select("spieler_id, rollen, mf_von_mannschaften")
+    .select("spieler_id, rollen")
     .eq("id", user.id)
     .maybeSingle();
   const rollen: string[] = (profil?.rollen as string[] | null) ?? [];
+  const spielerId = (profil?.spieler_id as string | null) ?? null;
+
+  // MF-Zugehörigkeit wird aus der Mannschaft abgeleitet (Führer/Stellvertreter)
+  let mfTeams: string[] = [];
+  if (spielerId) {
+    const { data: mt } = await supabase
+      .from("mannschaften")
+      .select("id")
+      .or(`mannschaftsfuehrer_id.eq.${spielerId},stellv_mf_id.eq.${spielerId}`);
+    mfTeams = (mt ?? []).map((m: any) => m.id);
+  }
+
   return {
     userId: user.id,
-    spielerId: (profil?.spieler_id as string | null) ?? null,
+    spielerId,
     rollen,
-    mfTeams: (profil?.mf_von_mannschaften as string[] | null) ?? [],
+    mfTeams,
     isAdmin: rollen.includes("admin"),
-    isMf: rollen.includes("mannschaftsfuehrer"),
+    isMf: mfTeams.length > 0,
   };
 }

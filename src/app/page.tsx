@@ -19,11 +19,12 @@ export default async function Home({
   // Profil + Rollen
   const { data: profil } = await supabase
     .from("benutzer")
-    .select("spieler_id, rollen, mf_von_mannschaften")
+    .select("spieler_id, rollen")
     .eq("id", user.id)
     .maybeSingle();
 
   // DSGVO-Gate: verknüpfte Spieler ohne Einwilligung zuerst einwilligen lassen
+  let isMf = false;
   if (profil?.spieler_id) {
     const { data: sp } = await supabase
       .from("spieler")
@@ -31,6 +32,14 @@ export default async function Home({
       .eq("id", profil.spieler_id)
       .maybeSingle();
     if (sp && !sp.dsgvo_einwilligung_am) redirect("/einwilligung");
+
+    const { data: mt } = await supabase
+      .from("mannschaften")
+      .select("id")
+      .or(
+        `mannschaftsfuehrer_id.eq.${profil.spieler_id},stellv_mf_id.eq.${profil.spieler_id}`
+      );
+    isMf = (mt ?? []).length > 0;
   }
 
   const teams = await loadTeams(supabase);
@@ -62,6 +71,7 @@ export default async function Home({
       selectedTeamId={selectedTeamId}
       userEmail={user.email ?? ""}
       rollen={rollen}
+      isMf={isMf}
     />
   );
 }

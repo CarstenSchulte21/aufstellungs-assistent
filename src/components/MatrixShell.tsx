@@ -43,12 +43,16 @@ export default function MatrixShell({
   selectedTeamId,
   userEmail,
   rollen,
+  isMf = false,
+  basePath = "/",
 }: {
   teams: TeamRow[];
   matrix: MatrixData | null;
   selectedTeamId: string;
   userEmail: string;
   rollen: string[];
+  isMf?: boolean;
+  basePath?: string;
 }) {
   const router = useRouter();
   const [nurLuecken, setNurLuecken] = useState(false);
@@ -96,7 +100,7 @@ export default function MatrixShell({
   }, [days, nurLuecken, roster, cells, team]);
 
   function switchTeam(id: string) {
-    router.push(`/?team=${id}`);
+    router.push(`${basePath}?team=${id}`);
   }
 
   return (
@@ -121,7 +125,15 @@ export default function MatrixShell({
           >
             Meine Spieltage
           </a>
-          {(rollen.includes("admin") || rollen.includes("mannschaftsfuehrer")) && (
+          {isMf && (
+            <a
+              href="/mannschaft"
+              className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
+            >
+              Meine Mannschaft
+            </a>
+          )}
+          {(rollen.includes("admin") || isMf) && (
             <>
               <a
                 href="/kader"
