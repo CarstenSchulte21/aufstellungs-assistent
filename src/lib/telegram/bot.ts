@@ -4,9 +4,12 @@ import { getAdmin } from "@/lib/supabase/admin";
 import {
   ANTWORT_STATUS,
   abfrageKeyboard,
+  abfrageText,
   statusLabel,
   upsertVerfuegbarkeit,
   ladeSpiel,
+  ersatzKeyboard,
+  ersatzText,
 } from "./abfrage";
 import { classifyAntwort } from "./classify";
 
@@ -150,8 +153,11 @@ function registerHandlers(bot: Bot) {
 
     await ctx.answerCallbackQuery({ text: "Gespeichert ✓" });
     try {
+      // Ursprungsnachricht (mit Spieltag-Details) erhalten, nur Antwort ergänzen
+      const info = await ladeSpiel(admin, spielId);
+      const kopf = info ? abfrageText(info) : "Spieltag-Abfrage";
       await ctx.editMessageText(
-        `Deine Antwort: *${statusLabel(status)}*\n\nDoch anders? Tippe einfach neu.`,
+        `${kopf}\n\n➡️ *Deine Antwort: ${statusLabel(status)}*\n_Doch anders? Einfach neu tippen._`,
         { parse_mode: "Markdown", reply_markup: abfrageKeyboard(spielId) }
       );
     } catch {
@@ -185,9 +191,14 @@ function registerHandlers(bot: Bot) {
       await ctx.answerCallbackQuery({ text: "Diese Anfrage gehört nicht zu dir." });
       return;
     }
-    if (!["gesendet", "freigegeben"].includes((anfrage as any).status)) {
+    // Antwort (auch nachträgliche Änderung) erlaubt, solange nicht final
+    if (
+      !["gesendet", "freigegeben", "zugesagt", "abgelehnt"].includes(
+        (anfrage as any).status
+      )
+    ) {
       await ctx.answerCallbackQuery({
-        text: "Diese Anfrage ist nicht mehr aktuell.",
+        text: "Diese Anfrage ist nicht mehr änderbar (bereits eingeplant oder abgelaufen).",
         show_alert: true,
       });
       return;
@@ -199,17 +210,15 @@ function registerHandlers(bot: Bot) {
       .update({ status: neu, beantwortet_am: new Date().toISOString() })
       .eq("id", anfrageId);
 
-    if (antwort === "ja") {
-      await admin.from("verfuegbarkeiten").upsert(
-        {
-          spiel_id: (anfrage as any).spiel_id,
-          spieler_id: sp.id,
-          status: "zugesagt",
-          quelle: "telegram_button",
-        },
-        { onConflict: "spiel_id,spieler_id" }
-      );
-    }
+    await admin.from("verfuegbarkeiten").upsert(
+      {
+        spiel_id: (anfrage as any).spiel_id,
+        spieler_id: sp.id,
+        status: antwort === "ja" ? "zugesagt" : "abgesagt",
+        quelle: "telegram_button",
+      },
+      { onConflict: "spiel_id,spieler_id" }
+    );
     await admin.from("nachrichten").insert({
       spieler_id: sp.id,
       spiel_id: (anfrage as any).spiel_id,
@@ -222,12 +231,16 @@ function registerHandlers(bot: Bot) {
 
     await ctx.answerCallbackQuery({ text: "Danke!" });
     try {
-      await ctx.editMessageText(
+      const info = await ladeSpiel(admin, (anfrage as any).spiel_id);
+      const kopf = info ? ersatzText(info) : "Ersatzanfrage";
+      const antwortZeile =
         antwort === "ja"
-          ? "Super, danke! Du bist als Ersatz vorgemerkt. ✅\nDer Mannschaftsführer plant dich final ein."
-          : "Alles klar, danke für die Rückmeldung. ❌",
-        { parse_mode: "Markdown" }
-      );
+          ? "➡️ *Deine Antwort: Ich helfe aus ✅*\n_Der Mannschaftsführer plant dich final ein. Doch anders? Einfach neu tippen._"
+          : "➡️ *Deine Antwort: Diesmal nicht ❌*\n_Doch anders? Einfach neu tippen._";
+      await ctx.editMessageText(`${kopf}\n\n${antwortZeile}`, {
+        parse_mode: "Markdown",
+        reply_markup: ersatzKeyboard(anfrageId),
+      });
     } catch {
       // ignorieren
     }
