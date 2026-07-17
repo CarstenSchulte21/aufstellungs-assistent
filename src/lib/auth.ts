@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export type SessionInfo = {
   userId: string;
+  spielerId: string | null;
   rollen: string[];
+  mfTeams: string[];
   isAdmin: boolean;
   isMf: boolean;
 };
@@ -16,13 +18,15 @@ export async function getSession(): Promise<SessionInfo | null> {
   if (!user) return null;
   const { data: profil } = await supabase
     .from("benutzer")
-    .select("rollen")
+    .select("spieler_id, rollen, mf_von_mannschaften")
     .eq("id", user.id)
     .maybeSingle();
   const rollen: string[] = (profil?.rollen as string[] | null) ?? [];
   return {
     userId: user.id,
+    spielerId: (profil?.spieler_id as string | null) ?? null,
     rollen,
+    mfTeams: (profil?.mf_von_mannschaften as string[] | null) ?? [],
     isAdmin: rollen.includes("admin"),
     isMf: rollen.includes("mannschaftsfuehrer"),
   };

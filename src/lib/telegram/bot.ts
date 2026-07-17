@@ -1,11 +1,45 @@
 import { Bot } from "grammy";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAdmin } from "@/lib/supabase/admin";
 import {
   ANTWORT_STATUS,
   abfrageKeyboard,
   statusLabel,
   upsertVerfuegbarkeit,
+  ladeSpiel,
 } from "./abfrage";
+import { classifyAntwort } from "./classify";
+
+// Nächstes anstehendes Spiel eines Spielers (für Freitext-Zuordnung).
+async function findNextSpiel(
+  admin: SupabaseClient,
+  spielerId: string
+): Promise<string | null> {
+  const { data: hs } = await admin
+    .from("halbserien")
+    .select("id")
+    .eq("aktiv", true)
+    .maybeSingle();
+  if (!hs) return null;
+  const { data: meld } = await admin
+    .from("meldungen")
+    .select("mannschaft_id")
+    .eq("spieler_id", spielerId)
+    .eq("halbserie_id", hs.id)
+    .maybeSingle();
+  if (!meld) return null;
+  const heute = new Date().toISOString().slice(0, 10);
+  const { data: spiel } = await admin
+    .from("spiele")
+    .select("id")
+    .eq("mannschaft_id", meld.mannschaft_id)
+    .eq("halbserie_id", hs.id)
+    .gte("datum", heute)
+    .order("datum", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return spiel?.id ?? null;
+}
 
 let _bot: Bot | null = null;
 let _initPromise: Promise<void> | null = null;
@@ -137,6 +171,60 @@ function registerHandlers(bot: Bot) {
       sp
         ? `Du bist verbunden als ${sp.name}. ✅`
         : "Du bist noch nicht verbunden. Öffne deinen Link aus der Webapp."
+    );
+  });
+
+  // Freitext (kein Kommando) -> per Claude klassifizieren, dann rückbestätigen.
+  bot.on("message:text", async (ctx) => {
+    const text = ctx.message.text ?? "";
+    if (text.startsWith("/")) return; // Kommandos ignorieren
+
+    const admin = getAdmin();
+    const { data: sp } = await admin
+      .from("spieler")
+      .select("id")
+      .eq("telegram_chat_id", ctx.chat.id)
+      .maybeSingle();
+    if (!sp) {
+      await ctx.reply(
+        "Du bist noch nicht verbunden. Öffne deinen Link aus der Webapp."
+      );
+      return;
+    }
+
+    const spielId = await findNextSpiel(admin, sp.id);
+    if (!spielId) {
+      await ctx.reply("Ich sehe gerade keinen anstehenden Spieltag für dich.");
+      return;
+    }
+
+    await admin.from("nachrichten").insert({
+      spieler_id: sp.id,
+      spiel_id: spielId,
+      richtung: "eingehend",
+      kanal: "telegram",
+      typ: "abfrage",
+      inhalt: text,
+    });
+
+    const klass = await classifyAntwort(text);
+    const info = await ladeSpiel(admin, spielId);
+    const spielRef = info ? ` für Spieltag ${info.spieltag_nr} (${info.gegner})` : "";
+
+    if (klass === "unklar") {
+      await ctx.reply(
+        `Das habe ich nicht sicher verstanden 🤔 — bitte tippe zur Antwort${spielRef}:`,
+        { reply_markup: abfrageKeyboard(spielId) }
+      );
+      return;
+    }
+
+    const status =
+      klass === "ja" ? "zugesagt" : klass === "nein" ? "abgesagt" : "unsicher";
+    await ctx.reply(
+      `Verstanden als *${statusLabel(status)}*${spielRef} — korrekt?\n` +
+        `Zur Bestätigung tippen (nichts wird ohne deinen Klick gespeichert):`,
+      { parse_mode: "Markdown", reply_markup: abfrageKeyboard(spielId) }
     );
   });
 }

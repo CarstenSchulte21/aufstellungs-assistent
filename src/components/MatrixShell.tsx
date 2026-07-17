@@ -115,13 +115,27 @@ export default function MatrixShell({
               {userEmail} · {rollenLabel(rollen)}
             </div>
           </div>
+          <a
+            href="/meine-spieltage"
+            className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
+          >
+            Meine Spieltage
+          </a>
           {(rollen.includes("admin") || rollen.includes("mannschaftsfuehrer")) && (
-            <a
-              href="/koppeln"
-              className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
-            >
-              Telegram-Kopplung
-            </a>
+            <>
+              <a
+                href="/kader"
+                className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
+              >
+                Kader
+              </a>
+              <a
+                href="/koppeln"
+                className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
+              >
+                Telegram-Kopplung
+              </a>
+            </>
           )}
           <form action="/auth/signout" method="post">
             <button
@@ -205,8 +219,9 @@ export default function MatrixShell({
                       const ok = st.zu >= st.need;
                       return (
                         <th key={d.id} className="px-1.5 py-2 align-bottom">
-                          <div
-                            className={`w-full rounded-lg border px-2 py-1.5 text-left ${
+                          <a
+                            href={`/spieltag/${d.id}`}
+                            className={`block w-full rounded-lg border px-2 py-1.5 text-left transition hover:shadow ${
                               ok
                                 ? "border-slate-200 bg-slate-50"
                                 : "border-amber-300 bg-amber-50"
@@ -225,7 +240,7 @@ export default function MatrixShell({
                             >
                               {st.zu}/{st.need} {ok ? "✓" : "⚠"}
                             </div>
-                          </div>
+                          </a>
                         </th>
                       );
                     })}
