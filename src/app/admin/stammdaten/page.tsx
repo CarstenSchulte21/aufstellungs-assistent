@@ -25,6 +25,7 @@ export default async function StammdatenPage() {
   const { data: spieler } = await supabase
     .from("spieler")
     .select("id, name, qttr, telefon, email, kanal, dsgvo_einwilligung_am")
+    .order("qttr", { ascending: false })
     .order("name");
 
   const { data: teams } = await supabase
