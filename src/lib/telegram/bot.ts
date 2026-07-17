@@ -159,6 +159,80 @@ function registerHandlers(bot: Bot) {
     }
   });
 
+  // Ersatzanfrage-Antwort: callback_data = e:<anfrageId>:<ja|nein>
+  bot.callbackQuery(/^e:/, async (ctx) => {
+    const parts = (ctx.callbackQuery.data || "").split(":");
+    const anfrageId = parts[1];
+    const antwort = parts[2];
+    const chatId = ctx.chat?.id;
+    if (!anfrageId || !antwort || !chatId) {
+      await ctx.answerCallbackQuery({ text: "Ungültig." });
+      return;
+    }
+    const admin = getAdmin();
+    const { data: sp } = await admin
+      .from("spieler")
+      .select("id")
+      .eq("telegram_chat_id", chatId)
+      .maybeSingle();
+    const { data: anfrage } = await admin
+      .from("ersatzanfragen")
+      .select("id, spiel_id, spieler_id, status")
+      .eq("id", anfrageId)
+      .maybeSingle();
+
+    if (!sp || !anfrage || (anfrage as any).spieler_id !== sp.id) {
+      await ctx.answerCallbackQuery({ text: "Diese Anfrage gehört nicht zu dir." });
+      return;
+    }
+    if (!["gesendet", "freigegeben"].includes((anfrage as any).status)) {
+      await ctx.answerCallbackQuery({
+        text: "Diese Anfrage ist nicht mehr aktuell.",
+        show_alert: true,
+      });
+      return;
+    }
+
+    const neu = antwort === "ja" ? "zugesagt" : "abgelehnt";
+    await admin
+      .from("ersatzanfragen")
+      .update({ status: neu, beantwortet_am: new Date().toISOString() })
+      .eq("id", anfrageId);
+
+    if (antwort === "ja") {
+      await admin.from("verfuegbarkeiten").upsert(
+        {
+          spiel_id: (anfrage as any).spiel_id,
+          spieler_id: sp.id,
+          status: "zugesagt",
+          quelle: "telegram_button",
+        },
+        { onConflict: "spiel_id,spieler_id" }
+      );
+    }
+    await admin.from("nachrichten").insert({
+      spieler_id: sp.id,
+      spiel_id: (anfrage as any).spiel_id,
+      ersatzanfrage_id: anfrageId,
+      richtung: "eingehend",
+      kanal: "telegram",
+      typ: "bestaetigung",
+      inhalt: "Ersatz-Antwort: " + neu,
+    });
+
+    await ctx.answerCallbackQuery({ text: "Danke!" });
+    try {
+      await ctx.editMessageText(
+        antwort === "ja"
+          ? "Super, danke! Du bist als Ersatz vorgemerkt. ✅\nDer Mannschaftsführer plant dich final ein."
+          : "Alles klar, danke für die Rückmeldung. ❌",
+        { parse_mode: "Markdown" }
+      );
+    } catch {
+      // ignorieren
+    }
+  });
+
   // /status — zeigt, ob und als wer man verbunden ist
   bot.command("status", async (ctx) => {
     const admin = getAdmin();

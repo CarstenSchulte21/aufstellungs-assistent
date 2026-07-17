@@ -144,6 +144,12 @@ export default function MatrixShell({
                 Kader
               </a>
               <a
+                href="/regeln"
+                className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
+              >
+                Regeln
+              </a>
+              <a
                 href="/koppeln"
                 className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
               >

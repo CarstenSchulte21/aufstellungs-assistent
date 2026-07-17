@@ -1,7 +1,9 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth";
-import S4Client, { type S4Player } from "./S4Client";
+import { ladeKandidaten } from "@/lib/engine/laden";
+import type { Kandidat } from "@/lib/engine/kandidaten";
+import S4Client, { type S4Player, type ErsatzAnfrage } from "./S4Client";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +74,26 @@ export default async function SpieltagPage({
     new Set((parallel ?? []).map((p: any) => p.mannschaften?.name).filter(Boolean))
   );
 
+  // Ersatzvorschläge + laufende Anfragen (nur MF/Admin, nur bei Lücke)
+  let kandidaten: Kandidat[] = [];
+  let anfragen: ErsatzAnfrage[] = [];
+  if (istMf) {
+    const res = await ladeKandidaten(supabase, params.id);
+    kandidaten = res?.kandidaten ?? [];
+    const { data: an } = await supabase
+      .from("ersatzanfragen")
+      .select("id, spieler_id, status, frist_bis, spieler:spieler_id(name)")
+      .eq("spiel_id", params.id)
+      .order("freigegeben_am");
+    anfragen = (an ?? []).map((a: any) => ({
+      id: a.id,
+      spieler_id: a.spieler_id,
+      name: a.spieler?.name ?? "—",
+      status: a.status,
+      frist_bis: a.frist_bis,
+    }));
+  }
+
   return (
     <S4Client
       spiel={{
@@ -87,6 +109,8 @@ export default async function SpieltagPage({
       players={players}
       istMf={istMf}
       parallelTeams={parallelTeams as string[]}
+      kandidaten={kandidaten}
+      anfragen={anfragen}
     />
   );
 }

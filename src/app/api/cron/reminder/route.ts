@@ -3,6 +3,7 @@ import { getAdmin } from "@/lib/supabase/admin";
 import { getBot, ensureInit } from "@/lib/telegram/bot";
 import { ladeSpiel, abfrageText, abfrageKeyboard } from "@/lib/telegram/abfrage";
 import { cronErlaubt, heuteBerlin } from "@/lib/cron";
+import { pruefeLockTimeout } from "@/lib/ersatzLock";
 
 export const dynamic = "force-dynamic";
 
@@ -109,5 +110,8 @@ export async function GET(req: Request): Promise<Response> {
     }
   }
 
-  return NextResponse.json({ ok: true, erinnert, eskaliert });
+  // Lock-Timeout gleich mitlaufen lassen (SPEC A.7)
+  const abgelaufen = await pruefeLockTimeout(admin, bot);
+
+  return NextResponse.json({ ok: true, erinnert, eskaliert, abgelaufen });
 }

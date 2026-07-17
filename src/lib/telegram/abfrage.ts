@@ -29,6 +29,28 @@ export function abfrageKeyboard(spielId: string): InlineKeyboard {
     .text("🤔 Unsicher", `v:${spielId}:unsicher`);
 }
 
+// Inline-Tastatur für eine Ersatzanfrage. callback_data: e:<anfrageId>:<antwort>
+export function ersatzKeyboard(anfrageId: string): InlineKeyboard {
+  return new InlineKeyboard()
+    .text("✅ Ich helfe aus", `e:${anfrageId}:ja`)
+    .text("❌ Diesmal nicht", `e:${anfrageId}:nein`);
+}
+
+export function ersatzText(spiel: {
+  spieltag_nr: number;
+  datum: string;
+  heim: boolean;
+  gegner: string;
+  teamName: string;
+}): string {
+  const ha = spiel.heim ? "Heim" : "Auswärts";
+  return (
+    `🆘 *Ersatz gesucht* — die ${spiel.teamName} braucht dich!\n` +
+    `Spieltag ${spiel.spieltag_nr}, ${fmtDatum(spiel.datum)} · ${ha} gegen ${spiel.gegner}\n\n` +
+    `Kannst du aushelfen?`
+  );
+}
+
 function fmtDatum(iso: string): string {
   return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
     weekday: "long",

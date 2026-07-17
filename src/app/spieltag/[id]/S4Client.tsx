@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { Kandidat } from "@/lib/engine/kandidaten";
 
 export type S4Player = {
   id: string;
@@ -11,6 +12,14 @@ export type S4Player = {
   kaderStatus: string;
   status: string;
   kommentar: string | null;
+};
+
+export type ErsatzAnfrage = {
+  id: string;
+  spieler_id: string;
+  name: string;
+  status: string;
+  frist_bis: string | null;
 };
 
 type Spiel = {
@@ -45,18 +54,53 @@ export default function S4Client({
   players,
   istMf,
   parallelTeams,
+  kandidaten = [],
+  anfragen = [],
 }: {
   spiel: Spiel;
   zu: number;
   players: S4Player[];
   istMf: boolean;
   parallelTeams: string[];
+  kandidaten?: Kandidat[];
+  anfragen?: ErsatzAnfrage[];
 }) {
   const router = useRouter();
   const supabase = createClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [info, setInfo] = useState<Record<string, string>>({});
+  const [ersatzInfo, setErsatzInfo] = useState<string>("");
   const fehlt = Math.max(0, spiel.need - zu);
+
+  // spieler_ids, die bereits eine laufende/erledigte Anfrage haben
+  const schonAngefragt = new Set(anfragen.map((a) => a.spieler_id));
+
+  async function freigeben(spielerId: string) {
+    setBusy("frei:" + spielerId);
+    setErsatzInfo("");
+    const res = await fetch("/api/ersatz/freigeben", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spiel_id: spiel.id, spieler_id: spielerId }),
+    });
+    const json = await res.json();
+    setBusy(null);
+    setErsatzInfo(res.ok ? json.hinweis ?? "Anfrage gesendet ✓" : json.error || "Fehler");
+    router.refresh();
+  }
+
+  async function einplanen(anfrageId: string) {
+    setBusy("plan:" + anfrageId);
+    const res = await fetch("/api/ersatz/einplanen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ersatzanfrage_id: anfrageId }),
+    });
+    const json = await res.json();
+    setBusy(null);
+    setErsatzInfo(res.ok ? "Eingeplant ✓" : json.error || "Fehler");
+    router.refresh();
+  }
 
   async function setStatus(spielerId: string, status: string) {
     setBusy(spielerId);
@@ -217,10 +261,116 @@ export default function S4Client({
           </div>
         )}
 
-        {/* Ersatz-Platzhalter */}
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-center text-[13px] text-slate-400">
-          Ersatzvorschläge bei Lücken — verfügbar ab Phase 2 (Meilenstein 5).
-        </div>
+        {/* Ersatzvorschläge (S8) */}
+        {istMf && (
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <h3 className="text-[15px] font-bold text-slate-800">
+              Ersatzvorschläge{" "}
+              {fehlt > 0 ? (
+                <span className="text-amber-600">
+                  ({fehlt} Lücke{fehlt > 1 ? "n" : ""})
+                </span>
+              ) : (
+                <span className="text-slate-400">(Vorschau)</span>
+              )}
+            </h3>
+            <p className="mb-3 mt-0.5 text-[12px] text-slate-500">
+              Regelkonform ermittelt (nur von unten, kein Sperrvermerk, nicht am
+              selben Tag verplant). Die Anfrage geht erst nach deiner Freigabe per
+              Telegram raus.
+            </p>
+
+            {/* Laufende Anfragen */}
+            {anfragen.length > 0 && (
+              <div className="mb-3 space-y-1.5">
+                {anfragen.map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-[13px]"
+                  >
+                    <span className="font-medium text-slate-800">{a.name}</span>
+                    <span className="rounded bg-white px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">
+                      {a.status}
+                    </span>
+                    {a.status === "zugesagt" && (
+                      <button
+                        onClick={() => einplanen(a.id)}
+                        disabled={busy === "plan:" + a.id}
+                        className="ml-auto rounded-lg bg-emerald-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        Fest einplanen
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Kandidatenliste */}
+            {kandidaten.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Keine zulässigen Ersatzkandidaten gefunden.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {kandidaten.map((c, i) => {
+                  const asked = schonAngefragt.has(c.id);
+                  const sperr = c.locked || asked;
+                  return (
+                    <div
+                      key={c.id}
+                      className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${
+                        sperr ? "border-slate-100 bg-slate-50 opacity-80" : "border-slate-200"
+                      }`}
+                    >
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-500">
+                        {i + 1}
+                      </span>
+                      <div className="mr-auto min-w-[180px]">
+                        <div className="font-semibold text-slate-900">{c.name}</div>
+                        <div className="text-[12px] text-slate-500">
+                          {c.teamNummer}. Mannschaft · Pos. {c.position} · QTTR{" "}
+                          {c.qttr} · {c.einsaetze} Ersatzeinsätze
+                        </div>
+                        {c.warnungen.map((w) => (
+                          <div key={w} className="mt-0.5 text-[12px] font-medium text-amber-600">
+                            ⚠ {w}
+                          </div>
+                        ))}
+                        {c.locked && !asked && (
+                          <div className="mt-0.5 text-[12px] font-medium text-slate-500">
+                            🔒 An diesem Tag bereits von einer anderen Mannschaft
+                            angefragt
+                          </div>
+                        )}
+                      </div>
+                      {asked ? (
+                        <span className="rounded bg-amber-50 px-2 py-1 text-[12px] font-semibold text-amber-700">
+                          angefragt
+                        </span>
+                      ) : (
+                        <button
+                          disabled={c.locked || busy === "frei:" + c.id}
+                          onClick={() => freigeben(c.id)}
+                          className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                            c.locked
+                              ? "cursor-not-allowed bg-slate-100 text-slate-400"
+                              : "bg-primary text-white hover:bg-primary-dark"
+                          }`}
+                        >
+                          {busy === "frei:" + c.id ? "…" : "Anfrage freigeben"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {ersatzInfo && (
+              <p className="mt-3 text-[12px] text-slate-600">{ersatzInfo}</p>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
