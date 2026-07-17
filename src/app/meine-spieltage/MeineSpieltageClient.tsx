@@ -15,6 +15,17 @@ export type SpieltagRow = {
   kommentar: string | null;
 };
 export type AbwRow = { id: string; von: string; bis: string; grund: string | null };
+export type ErsatzRow = {
+  id: string;
+  status: string;
+  frist_bis: string | null;
+  datum: string;
+  spieltag_nr: number;
+  heim: boolean;
+  gegner: string;
+  teamNummer: number;
+  teamName: string;
+};
 
 function fmt(iso: string) {
   return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
@@ -40,11 +51,13 @@ export default function MeineSpieltageClient({
   proxyOpts,
   spieltage,
   abwesenheiten,
+  ersatzanfragen = [],
 }: {
   zielId: string;
   proxyOpts: ProxyOpt[];
   spieltage: SpieltagRow[];
   abwesenheiten: AbwRow[];
+  ersatzanfragen?: ErsatzRow[];
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -62,6 +75,17 @@ export default function MeineSpieltageClient({
     setEVon(a.von);
     setEBis(a.bis);
     setEGrund(a.grund ?? "");
+  }
+
+  async function antwortErsatz(id: string, ant: "ja" | "nein") {
+    setBusy("ers:" + id);
+    await fetch("/api/ersatz/antwort", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ersatzanfrage_id: id, antwort: ant }),
+    });
+    setBusy(null);
+    router.refresh();
   }
 
   async function updateAbw(id: string) {
@@ -193,6 +217,86 @@ export default function MeineSpieltageClient({
           })}
         </div>
       </section>
+
+      {/* Ersatzanfragen an mich */}
+      {ersatzanfragen.length > 0 && (
+        <section>
+          <h2 className="mb-2 text-[15px] font-bold text-slate-800">
+            Ersatzanfragen an mich
+          </h2>
+          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+            {ersatzanfragen.map((a) => {
+              const offen = ["gesendet", "freigegeben"].includes(a.status);
+              const zugesagt = a.status === "zugesagt" || a.status === "eingeplant";
+              return (
+                <div key={a.id} className="flex flex-wrap items-center gap-3 p-3">
+                  <div className="mr-auto">
+                    <div className="text-sm font-medium text-slate-900">
+                      {fmt(a.datum)} · {a.heim ? "Heim" : "Auswärts"} gegen{" "}
+                      {a.gegner}
+                    </div>
+                    <div className="text-[12px] text-slate-500">
+                      Ersatz für die {a.teamNummer}. Mannschaft
+                      <span
+                        className={`ml-2 rounded px-1.5 py-0.5 font-semibold ${
+                          zugesagt
+                            ? "bg-emerald-100 text-emerald-700"
+                            : a.status === "abgelehnt"
+                            ? "bg-rose-100 text-rose-600"
+                            : "bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {a.status === "eingeplant"
+                          ? "fest eingeplant"
+                          : a.status}
+                      </span>
+                    </div>
+                  </div>
+                  {a.status !== "eingeplant" && a.status !== "abgelaufen" && (
+                    <>
+                      <button
+                        onClick={() => antwortErsatz(a.id, "ja")}
+                        disabled={busy === "ers:" + a.id}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                          zugesagt
+                            ? "bg-emerald-500 text-white"
+                            : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        }`}
+                      >
+                        ✓ Ich helfe aus
+                      </button>
+                      <button
+                        onClick={() => antwortErsatz(a.id, "nein")}
+                        disabled={busy === "ers:" + a.id}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                          a.status === "abgelehnt"
+                            ? "bg-rose-500 text-white"
+                            : "border border-rose-300 text-rose-600 hover:bg-rose-50"
+                        }`}
+                      >
+                        ✕ Diesmal nicht
+                      </button>
+                    </>
+                  )}
+                  {offen && (
+                    <span className="w-full text-[11px] text-slate-400">
+                      Bitte antworten
+                      {a.frist_bis
+                        ? ` bis ${new Date(a.frist_bis).toLocaleString("de-DE", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}`
+                        : ""}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Abwesenheiten */}
       <section>

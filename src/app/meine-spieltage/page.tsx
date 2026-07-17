@@ -5,6 +5,7 @@ import MeineSpieltageClient, {
   type SpieltagRow,
   type AbwRow,
   type ProxyOpt,
+  type ErsatzRow,
 } from "./MeineSpieltageClient";
 
 export const dynamic = "force-dynamic";
@@ -106,6 +107,27 @@ export default async function MeineSpieltagePage({
     .order("von");
   const abwesenheiten: AbwRow[] = (abw ?? []) as AbwRow[];
 
+  // Ersatzanfragen an mich (für andere Mannschaften)
+  const { data: ers } = await supabase
+    .from("ersatzanfragen")
+    .select(
+      "id, status, frist_bis, spiel_datum, spiele:spiel_id(spieltag_nr, datum, heim, gegner, mannschaften:mannschaft_id(nummer, name))"
+    )
+    .eq("spieler_id", zielId)
+    .in("status", ["freigegeben", "gesendet", "zugesagt", "abgelehnt", "eingeplant"])
+    .order("spiel_datum", { ascending: true });
+  const ersatzanfragen: ErsatzRow[] = (ers ?? []).map((a: any) => ({
+    id: a.id,
+    status: a.status,
+    frist_bis: a.frist_bis,
+    datum: a.spiele?.datum ?? a.spiel_datum,
+    spieltag_nr: a.spiele?.spieltag_nr ?? 0,
+    heim: a.spiele?.heim ?? true,
+    gegner: a.spiele?.gegner ?? "",
+    teamNummer: a.spiele?.mannschaften?.nummer ?? 0,
+    teamName: a.spiele?.mannschaften?.name ?? "",
+  }));
+
   return (
     <Shell>
       <MeineSpieltageClient
@@ -113,6 +135,7 @@ export default async function MeineSpieltagePage({
         proxyOpts={proxyOpts}
         spieltage={spieltage}
         abwesenheiten={abwesenheiten}
+        ersatzanfragen={ersatzanfragen}
       />
     </Shell>
   );
