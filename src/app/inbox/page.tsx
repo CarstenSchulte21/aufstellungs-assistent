@@ -40,8 +40,10 @@ export default async function InboxPage() {
     <div className="min-h-screen bg-slate-50">
       <AppHeader
         userEmail={user?.email ?? ""}
-        rollen={session.rollen}
+        isAdmin={session.isAdmin}
         isMf={session.isMf}
+        realIsAdmin={session.realIsAdmin}
+        viewAs={session.viewAs}
         inboxCount={items.length}
       />
       <main className="mx-auto max-w-3xl px-4 py-5">

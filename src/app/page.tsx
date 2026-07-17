@@ -52,8 +52,10 @@ export default async function Uebersicht() {
     <div className="min-h-screen bg-slate-50">
       <AppHeader
         userEmail={user?.email ?? ""}
-        rollen={session.rollen}
+        isAdmin={session.isAdmin}
         isMf={session.isMf}
+        realIsAdmin={session.realIsAdmin}
+        viewAs={session.viewAs}
         inboxCount={inboxCount}
       />
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-5">

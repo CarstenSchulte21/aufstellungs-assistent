@@ -37,16 +37,20 @@ export default function MatrixShell({
   matrix,
   selectedTeamId,
   userEmail,
-  rollen,
+  isAdmin = false,
   isMf = false,
+  realIsAdmin = false,
+  viewAs = null,
   basePath = "/",
 }: {
   teams: TeamRow[];
   matrix: MatrixData | null;
   selectedTeamId: string;
   userEmail: string;
-  rollen: string[];
+  isAdmin?: boolean;
   isMf?: boolean;
+  realIsAdmin?: boolean;
+  viewAs?: string | null;
   basePath?: string;
 }) {
   const router = useRouter();
@@ -100,7 +104,13 @@ export default function MatrixShell({
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      <AppHeader userEmail={userEmail} rollen={rollen} isMf={isMf} />
+      <AppHeader
+        userEmail={userEmail}
+        isAdmin={isAdmin}
+        isMf={isMf}
+        realIsAdmin={realIsAdmin}
+        viewAs={viewAs}
+      />
 
       {/* Mannschaftswahl */}
       <div className="mx-auto max-w-6xl px-4 pt-4">

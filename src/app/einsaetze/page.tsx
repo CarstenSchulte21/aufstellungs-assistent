@@ -82,8 +82,10 @@ export default async function EinsaetzePage() {
     <div className="min-h-screen bg-slate-50">
       <AppHeader
         userEmail={user?.email ?? ""}
-        rollen={session.rollen}
+        isAdmin={session.isAdmin}
         isMf={session.isMf}
+        realIsAdmin={session.realIsAdmin}
+        viewAs={session.viewAs}
       />
       <main className="mx-auto max-w-3xl px-4 py-5">
         <h1 className="mb-1 text-[15px] font-bold text-slate-800">

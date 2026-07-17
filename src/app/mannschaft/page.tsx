@@ -54,8 +54,10 @@ export default async function MannschaftPage({
       matrix={matrix}
       selectedTeamId={selectedTeamId}
       userEmail={user?.email ?? ""}
-      rollen={session.rollen}
-      isMf={true}
+      isAdmin={session.isAdmin}
+      isMf={session.isMf}
+      realIsAdmin={session.realIsAdmin}
+      viewAs={session.viewAs}
       basePath="/mannschaft"
     />
   );

@@ -1,34 +1,45 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Props = {
   userEmail: string;
-  rollen: string[];
-  isMf?: boolean;
+  isAdmin?: boolean; // effektiv
+  isMf?: boolean; // effektiv
+  realIsAdmin?: boolean;
+  viewAs?: string | null;
   inboxCount?: number;
 };
 
-function rollenLabel(rollen: string[]) {
-  if (rollen.includes("admin")) return "Admin";
-  if (rollen.includes("mannschaftsfuehrer")) return "Mannschaftsführer";
-  return "Spieler";
-}
-
 export default function AppHeader({
   userEmail,
-  rollen,
+  isAdmin = false,
   isMf = false,
+  realIsAdmin = false,
+  viewAs = null,
   inboxCount = 0,
 }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const istAdmin = rollen.includes("admin");
   const bar =
     "rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20";
   const item =
     "block rounded px-3 py-2 text-sm text-slate-700 hover:bg-slate-100";
   const gruppe =
     "mt-1 px-3 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400";
+
+  const rolleLabel = isAdmin
+    ? "Admin"
+    : isMf
+    ? "Mannschaftsführer"
+    : "Spieler";
+
+  function setView(v: string) {
+    if (v) document.cookie = `view_as=${v}; path=/; max-age=86400`;
+    else document.cookie = "view_as=; path=/; max-age=0";
+    router.refresh();
+  }
 
   return (
     <header className="relative bg-primary text-white">
@@ -42,10 +53,30 @@ export default function AppHeader({
               Aufstellungs-Assistent
             </div>
             <div className="text-[11px] text-blue-200">
-              {userEmail} · {rollenLabel(rollen)}
+              {userEmail} · {rolleLabel}
+              {viewAs && (
+                <span className="ml-1 rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold text-primary-dark">
+                  VORSCHAU
+                </span>
+              )}
             </div>
           </div>
         </a>
+
+        {realIsAdmin && (
+          <label className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-[11px] text-blue-50">
+            Ansicht:
+            <select
+              value={viewAs ?? ""}
+              onChange={(e) => setView(e.target.value)}
+              className="rounded bg-primary-dark px-1 py-0.5 text-[12px] text-white outline-none"
+            >
+              <option value="">Admin</option>
+              <option value="mannschaftsfuehrer">Mannschaftsführer</option>
+              <option value="spieler">Spieler</option>
+            </select>
+          </label>
+        )}
 
         <a href="/" className={bar}>
           Übersicht
@@ -53,7 +84,7 @@ export default function AppHeader({
         <a href="/meine-spieltage" className={bar}>
           Meine Spieltage
         </a>
-        {(istAdmin || isMf) && (
+        {(isAdmin || isMf) && (
           <a href="/inbox" className={bar}>
             Inbox
             {inboxCount > 0 && (
@@ -80,7 +111,7 @@ export default function AppHeader({
               Info &amp; Hilfe
             </a>
 
-            {(istAdmin || isMf) && (
+            {(isAdmin || isMf) && (
               <>
                 <div className={gruppe}>Mannschaftsführung</div>
                 {isMf && (
@@ -103,7 +134,7 @@ export default function AppHeader({
               </>
             )}
 
-            {istAdmin && (
+            {isAdmin && (
               <>
                 <div className={gruppe}>Verwaltung</div>
                 <a href="/admin" className={item}>
