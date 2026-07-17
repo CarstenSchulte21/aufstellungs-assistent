@@ -137,6 +137,14 @@ export default function MatrixShell({
               </a>
             </>
           )}
+          {rollen.includes("admin") && (
+            <a
+              href="/admin"
+              className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
+            >
+              Verwaltung
+            </a>
+          )}
           <form action="/auth/signout" method="post">
             <button
               type="submit"
