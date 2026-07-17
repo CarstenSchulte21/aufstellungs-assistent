@@ -190,3 +190,80 @@ Die sensiblen Freitext-Kommentare (`verfuegbarkeiten.kommentar`) werden jetzt
 über die View `v_verfuegbarkeiten` maskiert: Nur der Spieler selbst, sein
 Mannschaftsführer und der Admin sehen den Text — alle anderen sehen in der
 Matrix nur den Status. Die Matrix liest ausschließlich über diese View.
+
+---
+
+# Meilenstein 3 — Telegram-Bot
+
+Neu: Verfügbarkeits-Abfragen laufen über Telegram. Der Bot koppelt sich per
+persönlichem Link mit einem Spieler (`/start`-Deeplink), verschickt Abfragen mit
+Inline-Buttons `[✅ Ja] [❌ Nein] [🤔 Unsicher]`, schreibt die Antwort direkt in
+die Matrix (inkl. `audit_log`) und erinnert offene Abfragen automatisch
+(Scheduler). Alles serverseitig als Next.js-API-Routen, der Bot nutzt den
+service_role-Key.
+
+## Einrichtung Meilenstein 3 — Schritt für Schritt
+
+### 1. Abhängigkeiten & Migration
+
+```bash
+cd ~/Aufstellungsassistent
+npm install
+```
+
+Im Supabase **SQL Editor** `supabase/migrations/0005_telegram.sql` ausführen.
+
+### 2. Zwei Geheimnisse erzeugen
+
+Im Terminal zweimal ausführen und die Ausgaben notieren:
+
+```bash
+openssl rand -hex 32   # -> für TELEGRAM_WEBHOOK_SECRET
+openssl rand -hex 32   # -> für CRON_SECRET
+```
+
+### 3. Umgebungsvariablen eintragen (lokal UND Vercel)
+
+In `.env.local` ergänzen (und dieselben drei Werte in Vercel unter
+**Settings → Environment Variables**):
+
+```
+TELEGRAM_BOT_TOKEN=<dein frischer BotFather-Token>
+TELEGRAM_WEBHOOK_SECRET=<erste Zufallszeichenkette>
+CRON_SECRET=<zweite Zufallszeichenkette>
+```
+
+Danach den neuen Stand hochladen (`git add -A && git commit -m "M3: Telegram-Bot"
+&& git push`) — Vercel deployt automatisch mit den neuen Variablen.
+
+### 4. Webhook setzen
+
+Damit Telegram den Bot über die Online-App erreicht, einmal im Terminal
+(Token und Secret einsetzen):
+
+```bash
+curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://aufstellungs-assistent.vercel.app/api/telegram&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+```
+
+Antwort sollte `{"ok":true, ... "description":"Webhook was set"}` sein.
+
+### 5. Dich selbst koppeln und testen
+
+1. Öffne `https://aufstellungs-assistent.vercel.app/koppeln` (oben rechts in der
+   Matrix „Telegram-Kopplung", nur als Admin/MF sichtbar).
+2. Bei einem beliebigen Demo-Spieler auf **Link erzeugen** → **den Link öffnen**
+   → in Telegram auf **Start** tippen. Der Bot meldet „Verbunden!".
+3. Beim selben Spieler auf **Testabfrage** klicken → du bekommst in Telegram die
+   Spieltag-Frage mit den Buttons.
+4. Tippe **✅ Ja** → in der Matrix wird die Zelle dieses Spielers für den
+   Spieltag sekundenschnell grün.
+
+**Abnahme:** Test-Spieler bekommt die Abfrage in Telegram, tippt Ja, grüner
+Haken erscheint live in der Matrix.
+
+## Scheduler
+
+`vercel.json` legt zwei tägliche Cron-Jobs an (Erstabfrage & Reminder, Zeiten in
+UTC ~ morgens Europe/Berlin). Sie laufen nach dem Deployment automatisch und
+sind über `CRON_SECRET` geschützt. Manuell testen kannst du sie im Browser:
+`https://aufstellungs-assistent.vercel.app/api/cron/erstabfrage?secret=<CRON_SECRET>`.

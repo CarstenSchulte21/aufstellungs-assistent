@@ -115,6 +115,14 @@ export default function MatrixShell({
               {userEmail} · {rollenLabel(rollen)}
             </div>
           </div>
+          {(rollen.includes("admin") || rollen.includes("mannschaftsfuehrer")) && (
+            <a
+              href="/koppeln"
+              className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
+            >
+              Telegram-Kopplung
+            </a>
+          )}
           <form action="/auth/signout" method="post">
             <button
               type="submit"
