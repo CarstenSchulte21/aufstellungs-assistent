@@ -62,6 +62,31 @@ export default async function SpieltagPage({
     };
   });
 
+  // Ersatzspieler: Verfügbarkeit für dieses Spiel, aber nicht in der Meldung
+  const rosterIds = new Set(players.map((p) => p.id));
+  const ersatzIds = (Array.from(vMap.keys()) as string[]).filter(
+    (id) => !rosterIds.has(id)
+  );
+  if (ersatzIds.length > 0) {
+    const { data: extra } = await supabase
+      .from("meldungen")
+      .select("spieler_id, mannschaften:mannschaft_id(nummer), spieler:spieler_id(name)")
+      .eq("halbserie_id", (spiel as any).halbserie_id)
+      .in("spieler_id", ersatzIds);
+    for (const m of extra ?? []) {
+      const v = vMap.get((m as any).spieler_id) as any;
+      players.push({
+        id: (m as any).spieler_id,
+        name: (m as any).spieler?.name ?? "—",
+        position: 900,
+        kaderStatus: "aktiv",
+        status: v?.status ?? "nicht_angefragt",
+        kommentar: v?.kommentar ?? null,
+        ersatzHerkunft: (m as any).mannschaften?.nummer ?? null,
+      });
+    }
+  }
+
   const zu = players.filter((p) => p.status === "zugesagt").length;
 
   // Parallelspiele anderer Mannschaften am selben Tag

@@ -12,6 +12,7 @@ export type S4Player = {
   kaderStatus: string;
   status: string;
   kommentar: string | null;
+  ersatzHerkunft?: number | null;
 };
 
 export type ErsatzAnfrage = {
@@ -200,6 +201,7 @@ export default function S4Client({
                       className={`rounded px-1.5 py-0.5 text-[12px] font-medium ${g.tone}`}
                     >
                       {p.name}
+                      {p.ersatzHerkunft ? ` (Ersatz ${p.ersatzHerkunft}.M.)` : ""}
                       {p.kommentar ? " 💬" : ""}
                     </span>
                   ))}

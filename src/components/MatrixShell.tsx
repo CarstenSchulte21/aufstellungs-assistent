@@ -279,7 +279,7 @@ export default function MatrixShell({
                     <tr key={p.spieler_id} className="border-t border-slate-100">
                       <td className="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-1.5">
                         <span className="mr-2 inline-block w-5 text-right text-[11px] font-bold text-slate-300">
-                          {p.position}
+                          {p.ersatzHerkunft ? "" : p.position}
                         </span>
                         <span
                           className={
@@ -290,6 +290,11 @@ export default function MatrixShell({
                         >
                           {p.name}
                         </span>
+                        {p.ersatzHerkunft && (
+                          <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700">
+                            Ersatz · {p.ersatzHerkunft}. M.
+                          </span>
+                        )}
                         {p.kader_status === "pausiert" && (
                           <span className="ml-2 rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700">
                             pausiert
@@ -303,6 +308,16 @@ export default function MatrixShell({
                       </td>
                       {sichtbareDays.map((d) => {
                         const c = cells[`${d.id}:${p.spieler_id}`];
+                        if (p.ersatzHerkunft && !c) {
+                          return (
+                            <td
+                              key={d.id}
+                              className="px-1.5 py-1.5 text-center text-slate-200"
+                            >
+                              ·
+                            </td>
+                          );
+                        }
                         return (
                           <td key={d.id} className="px-1.5 py-1.5 text-center">
                             <Chip

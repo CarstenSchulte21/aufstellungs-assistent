@@ -17,6 +17,7 @@ export type RosterPlayer = {
   position: number;
   res: boolean;
   kader_status: KaderStatus;
+  ersatzHerkunft?: number | null; // Herkunfts-Mannschaft, wenn Ersatzspieler
 };
 
 export type Day = {
@@ -130,6 +131,34 @@ export async function loadMatrix(
         updated_at: (v as any).updated_at,
         eingetragen_von: (v as any).eingetragen_von,
       };
+    }
+  }
+
+  // Ersatzspieler ergänzen: Spieler mit Verfügbarkeit für ein Spiel dieser
+  // Mannschaft, die aber nicht in ihrer Meldung stehen (Aushilfe von unten).
+  const rosterIds = new Set(roster.map((r) => r.spieler_id));
+  const ersatzIds = new Set<string>();
+  for (const key of Object.keys(cells)) {
+    const sid = key.split(":")[1];
+    if (!rosterIds.has(sid)) ersatzIds.add(sid);
+  }
+  if (ersatzIds.size > 0) {
+    const { data: extra } = await supabase
+      .from("meldungen")
+      .select("spieler_id, mannschaften:mannschaft_id(nummer), spieler:spieler_id(name, qttr)")
+      .eq("halbserie_id", halbserieId)
+      .in("spieler_id", Array.from(ersatzIds));
+    for (const m of extra ?? []) {
+      const herkunft = (m as any).mannschaften?.nummer ?? null;
+      roster.push({
+        spieler_id: (m as any).spieler_id,
+        name: (m as any).spieler?.name ?? "—",
+        qttr: (m as any).spieler?.qttr ?? 0,
+        position: 900 + (herkunft ?? 0), // Ersatz ans Ende sortieren
+        res: false,
+        kader_status: statusMap.get((m as any).spieler_id) ?? "aktiv",
+        ersatzHerkunft: herkunft,
+      });
     }
   }
 
