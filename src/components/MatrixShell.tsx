@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AppHeader from "@/components/AppHeader";
 import type { MatrixData, TeamRow, RosterPlayer, Day } from "@/lib/matrix";
 
 // ── Status → Chip-Darstellung ────────────────────────────────────────────────
@@ -29,12 +30,6 @@ function fmtDatum(iso: string) {
     day: "2-digit",
     month: "2-digit",
   });
-}
-
-function rollenLabel(rollen: string[]) {
-  if (rollen.includes("admin")) return "Admin";
-  if (rollen.includes("mannschaftsfuehrer")) return "Mannschaftsführer";
-  return "Spieler";
 }
 
 export default function MatrixShell({
@@ -105,76 +100,7 @@ export default function MatrixShell({
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      {/* Kopfzeile */}
-      <header className="bg-primary text-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
-          <a href="/" className="mr-auto flex items-center gap-3" title="Zur Startseite">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg">
-              🏓
-            </div>
-            <div>
-              <div className="text-[15px] font-bold leading-tight">
-                Aufstellungs-Assistent
-              </div>
-              <div className="text-[11px] text-blue-200">
-                {userEmail} · {rollenLabel(rollen)}
-              </div>
-            </div>
-          </a>
-          <a
-            href="/meine-spieltage"
-            className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
-          >
-            Meine Spieltage
-          </a>
-          {isMf && (
-            <a
-              href="/mannschaft"
-              className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
-            >
-              Meine Mannschaft
-            </a>
-          )}
-          {(rollen.includes("admin") || isMf) && (
-            <>
-              <a
-                href="/kader"
-                className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
-              >
-                Kader
-              </a>
-              <a
-                href="/regeln"
-                className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
-              >
-                Regeln
-              </a>
-              <a
-                href="/koppeln"
-                className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
-              >
-                Telegram-Kopplung
-              </a>
-            </>
-          )}
-          {rollen.includes("admin") && (
-            <a
-              href="/admin"
-              className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
-            >
-              Verwaltung
-            </a>
-          )}
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
-            >
-              Abmelden
-            </button>
-          </form>
-        </div>
-      </header>
+      <AppHeader userEmail={userEmail} rollen={rollen} isMf={isMf} />
 
       {/* Mannschaftswahl */}
       <div className="mx-auto max-w-6xl px-4 pt-4">

@@ -34,6 +34,14 @@ export default async function Uebersicht() {
     if (sp && !sp.dsgvo_einwilligung_am) redirect("/einwilligung");
   }
 
+  // Onboarding-Gate: beim ersten Login den Willkommensscreen zeigen
+  const { data: prof } = await supabase
+    .from("benutzer")
+    .select("onboarding_gesehen")
+    .eq("id", session.userId)
+    .maybeSingle();
+  if (prof && prof.onboarding_gesehen === false) redirect("/willkommen");
+
   const { teams, luecken, doppelzusagen } = await loadLagebild(supabase);
   const inboxCount =
     session.isAdmin || session.isMf
