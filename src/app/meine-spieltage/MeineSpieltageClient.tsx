@@ -52,6 +52,29 @@ export default function MeineSpieltageClient({
   const [von, setVon] = useState("");
   const [bis, setBis] = useState("");
   const [grund, setGrund] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [eVon, setEVon] = useState("");
+  const [eBis, setEBis] = useState("");
+  const [eGrund, setEGrund] = useState("");
+
+  function startEdit(a: AbwRow) {
+    setEditId(a.id);
+    setEVon(a.von);
+    setEBis(a.bis);
+    setEGrund(a.grund ?? "");
+  }
+
+  async function updateAbw(id: string) {
+    if (!eVon || !eBis) return;
+    setBusy(id);
+    await supabase
+      .from("abwesenheiten")
+      .update({ von: eVon, bis: eBis, grund: eGrund || null })
+      .eq("id", id);
+    setEditId(null);
+    setBusy(null);
+    router.refresh();
+  }
 
   async function antwort(spielId: string, status: "zugesagt" | "abgesagt") {
     setBusy(spielId);
@@ -186,26 +209,81 @@ export default function MeineSpieltageClient({
                 Keine Abwesenheiten eingetragen.
               </p>
             )}
-            {abwesenheiten.map((a) => (
-              <div
-                key={a.id}
-                className="flex items-center gap-3 p-3 text-sm"
-              >
-                <span className="mr-auto text-slate-700">
-                  {fmt(a.von)} – {fmt(a.bis)}
-                  {a.grund && (
-                    <span className="ml-2 text-slate-400">· {a.grund}</span>
-                  )}
-                </span>
-                <button
-                  onClick={() => delAbw(a.id)}
-                  disabled={busy === a.id}
-                  className="text-[13px] font-medium text-rose-600 hover:underline"
+            {abwesenheiten.map((a) =>
+              editId === a.id ? (
+                <div
+                  key={a.id}
+                  className="flex flex-wrap items-end gap-2 p-3 text-sm"
                 >
-                  Löschen
-                </button>
-              </div>
-            ))}
+                  <label className="text-[12px] text-slate-600">
+                    Von
+                    <input
+                      type="date"
+                      value={eVon}
+                      onChange={(e) => setEVon(e.target.value)}
+                      className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                    />
+                  </label>
+                  <label className="text-[12px] text-slate-600">
+                    Bis
+                    <input
+                      type="date"
+                      value={eBis}
+                      onChange={(e) => setEBis(e.target.value)}
+                      className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                    />
+                  </label>
+                  <label className="text-[12px] text-slate-600">
+                    Grund
+                    <input
+                      type="text"
+                      value={eGrund}
+                      onChange={(e) => setEGrund(e.target.value)}
+                      placeholder="Urlaub"
+                      className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                    />
+                  </label>
+                  <button
+                    onClick={() => updateAbw(a.id)}
+                    disabled={busy === a.id}
+                    className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
+                  >
+                    Speichern
+                  </button>
+                  <button
+                    onClick={() => setEditId(null)}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              ) : (
+                <div
+                  key={a.id}
+                  className="flex items-center gap-3 p-3 text-sm"
+                >
+                  <span className="mr-auto text-slate-700">
+                    {fmt(a.von)} – {fmt(a.bis)}
+                    {a.grund && (
+                      <span className="ml-2 text-slate-400">· {a.grund}</span>
+                    )}
+                  </span>
+                  <button
+                    onClick={() => startEdit(a)}
+                    className="text-[13px] font-medium text-primary hover:underline"
+                  >
+                    Bearbeiten
+                  </button>
+                  <button
+                    onClick={() => delAbw(a.id)}
+                    disabled={busy === a.id}
+                    className="text-[13px] font-medium text-rose-600 hover:underline"
+                  >
+                    Löschen
+                  </button>
+                </div>
+              )
+            )}
           </div>
           <form
             onSubmit={addAbw}
