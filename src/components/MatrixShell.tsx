@@ -108,17 +108,19 @@ export default function MatrixShell({
       {/* Kopfzeile */}
       <header className="bg-primary text-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg">
-            🏓
-          </div>
-          <div className="mr-auto">
-            <div className="text-[15px] font-bold leading-tight">
-              Aufstellungs-Assistent
+          <a href="/" className="mr-auto flex items-center gap-3" title="Zur Startseite">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg">
+              🏓
             </div>
-            <div className="text-[11px] text-blue-200">
-              {userEmail} · {rollenLabel(rollen)}
+            <div>
+              <div className="text-[15px] font-bold leading-tight">
+                Aufstellungs-Assistent
+              </div>
+              <div className="text-[11px] text-blue-200">
+                {userEmail} · {rollenLabel(rollen)}
+              </div>
             </div>
-          </div>
+          </a>
           <a
             href="/meine-spieltage"
             className="rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20"
