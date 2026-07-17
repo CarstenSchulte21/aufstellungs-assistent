@@ -52,7 +52,7 @@ export default async function KoppelnPage() {
         <p className="mb-4 text-sm text-slate-600">
           Erzeuge für einen Spieler einen persönlichen Verbindungs-Link. Der
           Spieler öffnet ihn (oder du selbst zum Testen), tippt in Telegram auf
-          „Start" — danach kannst du eine Testabfrage schicken.
+          „Start“ — danach kannst du eine Testabfrage schicken.
         </p>
         <KoppelnClient spieler={spieler} />
       </main>
