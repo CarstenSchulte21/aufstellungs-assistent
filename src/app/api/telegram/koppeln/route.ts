@@ -24,13 +24,22 @@ export async function POST(req: Request): Promise<Response> {
     .select("token")
     .single();
   if (error || !token) {
-    return NextResponse.json({ error: "Token konnte nicht erstellt werden" }, { status: 500 });
+    return NextResponse.json(
+      { error: "DB: " + (error?.message ?? "kein Token zurückgegeben") },
+      { status: 500 }
+    );
   }
 
-  const bot = getBot();
-  await ensureInit(bot);
-  const me = await bot.api.getMe();
-  const link = `https://t.me/${me.username}?start=${token.token}`;
-
-  return NextResponse.json({ link });
+  try {
+    const bot = getBot();
+    await ensureInit(bot);
+    const me = await bot.api.getMe();
+    const link = `https://t.me/${me.username}?start=${token.token}`;
+    return NextResponse.json({ link });
+  } catch (e) {
+    return NextResponse.json(
+      { error: "Bot: " + (e instanceof Error ? e.message : String(e)) },
+      { status: 500 }
+    );
+  }
 }
