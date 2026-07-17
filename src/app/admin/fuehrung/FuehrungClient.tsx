@@ -4,17 +4,26 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export type Kandidat = { id: string; name: string };
+export type Kandidat = { id: string; name: string; team?: number | null };
 export type TeamFuehrung = {
   id: string;
   nummer: number;
   name: string;
   mf_id: string | null;
   stellv_id: string | null;
-  kader: Kandidat[];
 };
 
-export default function FuehrungClient({ teams }: { teams: TeamFuehrung[] }) {
+function label(k: Kandidat) {
+  return k.team ? `${k.name} · ${k.team}. Mannschaft` : k.name;
+}
+
+export default function FuehrungClient({
+  teams,
+  alle,
+}: {
+  teams: TeamFuehrung[];
+  alle: Kandidat[];
+}) {
   const router = useRouter();
   const supabase = createClient();
   const [state, setState] = useState<
@@ -68,9 +77,9 @@ export default function FuehrungClient({ teams }: { teams: TeamFuehrung[] }) {
                   className="mt-1 block rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
                 >
                   <option value="">— keiner —</option>
-                  {t.kader.map((k) => (
+                  {alle.map((k) => (
                     <option key={k.id} value={k.id}>
-                      {k.name}
+                      {label(k)}
                     </option>
                   ))}
                 </select>
@@ -88,11 +97,11 @@ export default function FuehrungClient({ teams }: { teams: TeamFuehrung[] }) {
                   className="mt-1 block rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
                 >
                   <option value="">— keiner —</option>
-                  {t.kader
+                  {alle
                     .filter((k) => k.id !== s.mf)
                     .map((k) => (
                       <option key={k.id} value={k.id}>
-                        {k.name}
+                        {label(k)}
                       </option>
                     ))}
                 </select>

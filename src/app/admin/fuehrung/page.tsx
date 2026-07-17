@@ -22,18 +22,25 @@ export default async function FuehrungPage() {
     .select("id, nummer, name, mannschaftsfuehrer_id, stellv_mf_id")
     .order("nummer");
 
+  // Mannschafts-Zuordnung je Spieler (nur als Hinweis im Dropdown)
   const { data: meld } = await supabase
     .from("meldungen")
-    .select("mannschaft_id, position, spieler:spieler_id(id, name)")
-    .eq("halbserie_id", hs?.id ?? "")
-    .order("position");
+    .select("spieler_id, mannschaften:mannschaft_id(nummer)")
+    .eq("halbserie_id", hs?.id ?? "");
+  const teamVon = new Map<string, number>();
+  for (const m of meld ?? [])
+    teamVon.set((m as any).spieler_id, (m as any).mannschaften?.nummer ?? 0);
 
-  const kaderVon = new Map<string, Kandidat[]>();
-  for (const m of meld ?? []) {
-    const arr = kaderVon.get((m as any).mannschaft_id) ?? [];
-    arr.push({ id: (m as any).spieler?.id, name: (m as any).spieler?.name ?? "—" });
-    kaderVon.set((m as any).mannschaft_id, arr);
-  }
+  // Auswahl: ALLE Spieler (keine Einschränkung auf die eigene Mannschaft)
+  const { data: spieler } = await supabase
+    .from("spieler")
+    .select("id, name")
+    .order("name");
+  const alle: Kandidat[] = (spieler ?? []).map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    team: teamVon.get(s.id) ?? null,
+  }));
 
   const rows: TeamFuehrung[] = (teams ?? []).map((t: any) => ({
     id: t.id,
@@ -41,7 +48,6 @@ export default async function FuehrungPage() {
     name: t.name,
     mf_id: t.mannschaftsfuehrer_id,
     stellv_id: t.stellv_mf_id,
-    kader: kaderVon.get(t.id) ?? [],
   }));
 
   return (
@@ -61,7 +67,7 @@ export default async function FuehrungPage() {
           Mannschafts-Sicht — sobald ihr Login mit dem Spieler verknüpft ist
           (gleiche E-Mail beim ersten Login).
         </p>
-        <FuehrungClient teams={rows} />
+        <FuehrungClient teams={rows} alle={alle} />
       </main>
     </div>
   );
