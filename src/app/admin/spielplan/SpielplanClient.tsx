@@ -37,9 +37,20 @@ export default function SpielplanClient({
 
   const teamName = (id: string) =>
     teams.find((t) => t.id === id)?.name ?? "—";
+  const teamNummer = (id: string) =>
+    teams.find((t) => t.id === id)?.nummer ?? 99;
 
   const sichtbar = useMemo(
-    () => rows.filter((r) => !filter || r.mannschaft_id === filter),
+    () =>
+      rows
+        .filter((r) => !filter || r.mannschaft_id === filter)
+        .sort(
+          (a, b) =>
+            teamNummer(a.mannschaft_id) - teamNummer(b.mannschaft_id) ||
+            a.datum.localeCompare(b.datum) ||
+            a.spieltag_nr - b.spieltag_nr
+        ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [rows, filter]
   );
 

@@ -34,6 +34,20 @@ Aktuell werden Spielplan und Meldung per einmaligem SQL-Skript importiert
 - Wiederholbar pro Halbserie, mit Duplikat-Abgleich (bestehende Spieler per
   Name/QTTR zuordnen statt doppelt anlegen).
 
+## Mannschaftsführer-Rollen & dedizierte MF-Sichten
+
+- **Admin weist MF zu:** Oberfläche, mit der der Admin einzelne Spieler als
+  Mannschaftsführer bzw. stellvertretenden MF einer Mannschaft bestimmt
+  (mehrere pro Team möglich). Datenmodell trägt das schon:
+  `benutzer.rollen` enthält `mannschaftsfuehrer`, `benutzer.mf_von_mannschaften`
+  ist ein uuid[] der zugeordneten Mannschaften (Co-MF möglich). Es fehlt die
+  Admin-UI (aktuell nur per SQL).
+- **Dedizierte MF-Sicht:** Eigene Ansicht, die nur die eigene(n) Mannschaft(en)
+  zeigt — Spielplan, Kader und (ab Phase 2) Ersatzvorschläge/Inbox auf das eigene
+  Team gefiltert. Die vorhandenen Screens (Kader S2, Spieltag S4) filtern bereits
+  über `mfTeams`; nötig ist ein MF-Einstieg/Dashboard und ggf. ein auf das Team
+  reduzierter Spielplan.
+
 ## Mannschafts-Sollstärke durch MF anpassbar
 
 `mannschaften.spielstaerke` (Sechser/Vierer) soll der Mannschaftsführer künftig
