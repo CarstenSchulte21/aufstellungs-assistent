@@ -41,18 +41,34 @@ export async function ladeKandidaten(
     (kader ?? []).map((k: any) => [k.spieler_id, k.status])
   );
 
-  // Wer spielt am selben Tag (eigene Mannschaft hat ein Spiel an diesem Datum)?
+  // Spiele am selben Tag (alle Mannschaften)
   const { data: spieleAmTag } = await supabase
     .from("spiele")
-    .select("mannschaft_id")
+    .select("id, mannschaft_id")
     .eq("halbserie_id", hs)
     .eq("datum", datum);
-  const teamsAmTag = new Set(
-    (spieleAmTag ?? []).map((s: any) => s.mannschaft_id)
+  const spielIdsAmTag = (spieleAmTag ?? []).map((s: any) => s.id);
+  const mannschaftIdsAmTag = Array.from(
+    new Set((spieleAmTag ?? []).map((s: any) => s.mannschaft_id))
   );
-  const belegtAmTag = (meld ?? [])
-    .filter((m: any) => teamsAmTag.has(m.mannschaft_id))
-    .map((m: any) => m.spieler_id);
+  // Team-Nummern mit Spiel am selben Tag (für weiche Warnung)
+  const nummerVon = new Map<string, number>();
+  for (const m of meld ?? [])
+    nummerVon.set((m as any).mannschaft_id, (m as any).mannschaften?.nummer ?? 0);
+  const spieltAmTagNummern = mannschaftIdsAmTag
+    .map((id: any) => nummerVon.get(id) ?? 0)
+    .filter((n) => n > 0);
+
+  // Wer hat an diesem Tag schon irgendwo ZUGESAGT -> gesperrt (nicht anfragbar)
+  let zugesagtAmTag: string[] = [];
+  if (spielIdsAmTag.length > 0) {
+    const { data: zus } = await supabase
+      .from("verfuegbarkeiten")
+      .select("spieler_id")
+      .in("spiel_id", spielIdsAmTag)
+      .eq("status", "zugesagt");
+    zugesagtAmTag = (zus ?? []).map((v: any) => v.spieler_id);
+  }
 
   // Offene Ersatzanfragen am selben Tag -> Lock
   const { data: locks } = await supabase
@@ -104,7 +120,8 @@ export async function ladeKandidaten(
   const result = ermittleKandidaten({
     luecke: { teamNummer, datum, heim: (spiel as any).heim },
     kandidaten,
-    belegtAmTag,
+    zugesagtAmTag,
+    spieltAmTagNummern,
     lockAktiv,
     nichtVerfuegbar,
     einsaetze,

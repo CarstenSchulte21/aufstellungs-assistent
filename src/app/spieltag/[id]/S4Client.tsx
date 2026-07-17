@@ -341,8 +341,8 @@ export default function S4Client({
                         ))}
                         {c.locked && !asked && (
                           <div className="mt-0.5 text-[12px] font-medium text-slate-500">
-                            🔒 An diesem Tag bereits von einer anderen Mannschaft
-                            angefragt
+                            🔒 Aktuell nicht anfragbar (bereits von einer anderen
+                            Mannschaft angefragt oder für diesen Tag zugesagt)
                           </div>
                         )}
                       </div>

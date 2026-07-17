@@ -65,13 +65,26 @@ describe("ermittleKandidaten – harte Filter", () => {
     expect(r.map((k) => k.id)).toEqual(["ok"]);
   });
 
-  it("schließt Spieler aus, die am selben Tag schon verplant sind", () => {
+  it("zeigt bereits Zugesagte an, aber gesperrt (nicht anfragbar)", () => {
     const r = ermittleKandidaten(
-      ctx([sp({ id: "belegt", teamNummer: 2 }), sp({ id: "frei", teamNummer: 2 })], {
-        belegtAmTag: ["belegt"],
+      ctx([sp({ id: "zugesagt", teamNummer: 2 }), sp({ id: "frei", teamNummer: 2 })], {
+        zugesagtAmTag: ["zugesagt"],
       })
     );
-    expect(r.map((k) => k.id)).toEqual(["frei"]);
+    expect(r.map((k) => k.id).sort()).toEqual(["frei", "zugesagt"]);
+    const z = r.find((k) => k.id === "zugesagt")!;
+    expect(z.locked).toBe(true);
+    expect(z.warnungen.some((w) => w.includes("bereits zugesagt"))).toBe(true);
+    expect(r.find((k) => k.id === "frei")!.locked).toBe(false);
+  });
+
+  it("warnt nur (ohne zu sperren), wenn die eigene Mannschaft am selben Tag spielt und noch keine Zusage vorliegt", () => {
+    const r = ermittleKandidaten(
+      ctx([sp({ id: "offen", teamNummer: 2 })], { spieltAmTagNummern: [2] })
+    );
+    expect(r).toHaveLength(1);
+    expect(r[0].locked).toBe(false);
+    expect(r[0].warnungen.some((w) => w.includes("selben Tag"))).toBe(true);
   });
 
   it("schließt Tabu-Spieler aus", () => {

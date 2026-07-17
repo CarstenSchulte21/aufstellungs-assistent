@@ -44,7 +44,8 @@ export type EngineConfig = {
 export type EngineKontext = {
   luecke: { teamNummer: number; datum: string; heim: boolean };
   kandidaten: EngineSpieler[];
-  belegtAmTag?: string[]; // spielt/zugesagt am selben Tag
+  zugesagtAmTag?: string[]; // hat am selben Tag schon irgendwo zugesagt -> gesperrt
+  spieltAmTagNummern?: number[]; // Mannschaftsnummern mit Spiel am selben Tag (weiche Warnung)
   lockAktiv?: string[]; // offene Ersatzanfrage am selben Tag (andere Mannschaft)
   nichtVerfuegbar?: string[]; // abgesagt/abwesend für dieses Spiel
   einsaetze?: Record<string, number>; // Ersatzeinsätze diese Halbserie
@@ -73,7 +74,8 @@ export function wochentag(iso: string): string {
  * Kaskade und Konfiguration, mit weichen Warnungen und Lock-Kennzeichnung.
  */
 export function ermittleKandidaten(ctx: EngineKontext): Kandidat[] {
-  const belegt = new Set(ctx.belegtAmTag ?? []);
+  const zugesagt = new Set(ctx.zugesagtAmTag ?? []);
+  const spieltNummern = new Set(ctx.spieltAmTagNummern ?? []);
   const lock = new Set(ctx.lockAktiv ?? []);
   const nv = new Set(ctx.nichtVerfuegbar ?? []);
   const tabu = new Set(ctx.config?.tabu_spieler ?? []);
@@ -87,13 +89,18 @@ export function ermittleKandidaten(ctx: EngineKontext): Kandidat[] {
       !s.sperrvermerk &&
       s.kaderStatus === "aktiv" &&
       !nv.has(s.id) &&
-      !belegt.has(s.id) &&
       !tabu.has(s.id)
   );
 
   const kandidaten: Kandidat[] = gefiltert.map((s) => {
     const warnungen: string[] = [];
     const p = s.praeferenzen ?? {};
+    // Tages-Konflikt: schon zugesagt -> gesperrt; eigene Mannschaft spielt,
+    // aber noch keine Zusage -> nur Hinweis (anfragbar).
+    if (zugesagt.has(s.id))
+      warnungen.push("Hat für diesen Tag bereits zugesagt");
+    else if (spieltNummern.has(s.teamNummer))
+      warnungen.push("Eigene Mannschaft spielt am selben Tag (noch offen)");
     if (s.res) warnungen.push("Reservespieler (RES)");
     if (p.nur_heimspiele && !ctx.luecke.heim)
       warnungen.push("Präferenz: nur Heimspiele");
@@ -121,7 +128,7 @@ export function ermittleKandidaten(ctx: EngineKontext): Kandidat[] {
       qttr: s.qttr,
       einsaetze: n,
       warnungen,
-      locked: lock.has(s.id),
+      locked: lock.has(s.id) || zugesagt.has(s.id),
     };
   });
 

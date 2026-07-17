@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAdmin } from "@/lib/supabase/admin";
+import { getBot, ensureInit } from "@/lib/telegram/bot";
 
 export const dynamic = "force-dynamic";
+
+function fmtDatum(iso: string): string {
+  return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
 
 // MF/Admin plant einen zugesagten Ersatzspieler final ein: Ersatzanfrage ->
 // eingeplant, Einsatz verbuchen (ersatz=true), Verfügbarkeit auf zugesagt.
@@ -24,7 +33,9 @@ export async function POST(req: Request): Promise<Response> {
 
   const { data: spiel } = await admin
     .from("spiele")
-    .select("id, datum, mannschaft_id, halbserie_id")
+    .select(
+      "id, spieltag_nr, datum, heim, gegner, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name)"
+    )
     .eq("id", (anfrage as any).spiel_id)
     .maybeSingle();
   if (!spiel) return NextResponse.json({ error: "Spiel nicht gefunden" }, { status: 404 });
@@ -65,5 +76,41 @@ export async function POST(req: Request): Promise<Response> {
     details: { spiel_id: (spiel as any).id, spieler_id: (anfrage as any).spieler_id },
   });
 
-  return NextResponse.json({ ok: true });
+  // Spieler final benachrichtigen (falls gekoppelt)
+  let benachrichtigt = false;
+  try {
+    const { data: sp } = await admin
+      .from("spieler")
+      .select("telegram_chat_id")
+      .eq("id", (anfrage as any).spieler_id)
+      .maybeSingle();
+    if (sp?.telegram_chat_id) {
+      const ha = (spiel as any).heim ? "Heim" : "Auswärts";
+      const teamName = (spiel as any).mannschaften?.name ?? "Mannschaft";
+      const bot = getBot();
+      await ensureInit(bot);
+      await bot.api.sendMessage(
+        Number(sp.telegram_chat_id),
+        `✅ *Du bist fest eingeplant!*\n` +
+          `Spieltag ${(spiel as any).spieltag_nr} der ${teamName}: ` +
+          `${fmtDatum((spiel as any).datum)} · ${ha} gegen ${(spiel as any).gegner}.\n\n` +
+          `Bitte sei rechtzeitig da. Danke fürs Aushelfen! 🏓`,
+        { parse_mode: "Markdown" }
+      );
+      await admin.from("nachrichten").insert({
+        spieler_id: (anfrage as any).spieler_id,
+        spiel_id: (spiel as any).id,
+        ersatzanfrage_id,
+        richtung: "ausgehend",
+        kanal: "telegram",
+        typ: "bestaetigung",
+        inhalt: "Fest eingeplant",
+      });
+      benachrichtigt = true;
+    }
+  } catch {
+    // Benachrichtigung ist optional
+  }
+
+  return NextResponse.json({ ok: true, benachrichtigt });
 }
