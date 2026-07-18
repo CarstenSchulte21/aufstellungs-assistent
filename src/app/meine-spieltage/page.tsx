@@ -7,6 +7,7 @@ import MeineSpieltageClient, {
   type ProxyOpt,
   type ErsatzRow,
 } from "./MeineSpieltageClient";
+import MeinePraeferenzen from "./MeinePraeferenzen";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,17 @@ export default async function MeineSpieltagePage({
     teamName: a.spiele?.mannschaften?.name ?? "",
   }));
 
+  // Eigene Präferenzen (des eingeloggten Spielers, nicht des Proxy-Ziels)
+  let meinePraef: Record<string, unknown> = {};
+  if (session.spielerId) {
+    const { data: selbst } = await supabase
+      .from("spieler")
+      .select("praeferenzen")
+      .eq("id", session.spielerId)
+      .maybeSingle();
+    meinePraef = ((selbst as any)?.praeferenzen as Record<string, unknown>) ?? {};
+  }
+
   // Ansprechpartner (MF + Stellvertreter) der eigenen Stamm-Mannschaft
   let ansprech: {
     teamName: string;
@@ -199,6 +211,11 @@ export default async function MeineSpieltagePage({
               )}
             </div>
           )}
+        </div>
+      )}
+      {session.spielerId && (
+        <div className="mb-4">
+          <MeinePraeferenzen praeferenzen={meinePraef} />
         </div>
       )}
       <MeineSpieltageClient

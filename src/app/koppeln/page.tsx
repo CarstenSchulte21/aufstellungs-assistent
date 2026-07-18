@@ -17,15 +17,18 @@ export default async function KoppelnPage() {
     .eq("aktiv", true)
     .maybeSingle();
 
-  const { data: meld } = await supabase
-    .from("meldungen")
+  // Nur der eigene Kader (Stamm): MF sieht seine Mannschaft(en), Admin alle
+  // (im Admin-Modus umfasst mfTeams bereits alle Mannschaften).
+  const { data: stamm } = await supabase
+    .from("kader_zuordnung")
     .select(
-      "position, spieler:spieler_id(id, name, telegram_chat_id), mannschaften:mannschaft_id(nummer, name)"
+      "spieler:spieler_id(id, name, telegram_chat_id), mannschaften:mannschaft_id(nummer, name)"
     )
     .eq("halbserie_id", hs?.id ?? "")
-    .order("position", { ascending: true });
+    .eq("rolle", "stamm")
+    .in("mannschaft_id", session.mfTeams);
 
-  const spieler: KoppelSpieler[] = (meld ?? [])
+  const spieler: KoppelSpieler[] = (stamm ?? [])
     .map((m: any) => ({
       id: m.spieler?.id,
       name: m.spieler?.name ?? "—",

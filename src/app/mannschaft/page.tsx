@@ -20,7 +20,26 @@ export default async function MannschaftPage({
   } = await supabase.auth.getUser();
 
   const alle = await loadTeams(supabase);
-  const meine = alle.filter((t) => session.mfTeams.includes(t.id));
+  let meine = alle.filter((t) => session.mfTeams.includes(t.id));
+
+  // Spieler ohne MF-Rolle: die eigene Stamm-Mannschaft (schreibgeschützt)
+  if (meine.length === 0 && session.spielerId) {
+    const { data: hs } = await supabase
+      .from("halbserien")
+      .select("id")
+      .eq("aktiv", true)
+      .maybeSingle();
+    const { data: stamm } = await supabase
+      .from("kader_zuordnung")
+      .select("mannschaft_id")
+      .eq("spieler_id", session.spielerId)
+      .eq("halbserie_id", hs?.id ?? "")
+      .eq("rolle", "stamm")
+      .maybeSingle();
+    if (stamm?.mannschaft_id) {
+      meine = alle.filter((t) => t.id === stamm.mannschaft_id);
+    }
+  }
 
   if (meine.length === 0) {
     return (
@@ -35,9 +54,9 @@ export default async function MannschaftPage({
         </header>
         <div className="mx-auto max-w-3xl px-4 py-8">
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-            Du bist aktuell keiner Mannschaft als Mannschaftsführer oder
-            Stellvertreter zugeordnet. Der Admin kann das unter „Verwaltung →
-            Mannschaftsführung“ einstellen.
+            Dir ist aktuell keine Stamm-Mannschaft zugeordnet. Sobald dich dein
+            Mannschaftsführer in den Kader aufgenommen hat, erscheint hier deine
+            Mannschaft.
           </div>
         </div>
       </main>

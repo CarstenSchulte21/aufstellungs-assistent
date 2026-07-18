@@ -79,26 +79,15 @@ export default function AppHeader({
           </label>
         )}
 
-        {/* Schnellzugriff je Modus */}
-        {spielerModus || !hatManagement ? (
-          <a href="/meine-spieltage" className={bar}>
-            Meine Spieltage
-            {spielerCount > 0 && (
-              <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
-                {spielerCount}
-              </span>
-            )}
-          </a>
-        ) : (
-          <a href="/inbox" className={bar}>
-            Aufgaben
-            {inboxCount > 0 && (
-              <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
-                {inboxCount}
-              </span>
-            )}
-          </a>
-        )}
+        {/* Schnellzugriff */}
+        <a href="/meine-spieltage" className={bar}>
+          Meine Spieltage
+          {spielerCount > 0 && (
+            <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
+              {spielerCount}
+            </span>
+          )}
+        </a>
 
         <button onClick={() => setOpen((o) => !o)} className={bar}>
           Menü ▾
@@ -112,14 +101,8 @@ export default function AppHeader({
             {isAdmin || isMf ? (
               <>
                 <div className={gruppe}>Mannschaft</div>
-                {isMf && (
-                  <a href="/mannschaft" className={item}>
-                    Meine Mannschaft
-                  </a>
-                )}
-                <a href="/inbox" className={item}>
-                  Meine offenen Aufgaben
-                  {inboxCount > 0 ? ` (${inboxCount})` : ""}
+                <a href="/mannschaft" className={item}>
+                  Meine Mannschaft
                 </a>
                 <a href="/kader" className={item}>
                   Kader
@@ -127,9 +110,11 @@ export default function AppHeader({
                 <a href="/regeln" className={item}>
                   Regeln
                 </a>
-                <a href="/einsaetze" className={item}>
-                  Einsätze &amp; Fairness
-                </a>
+                {isAdmin && (
+                  <a href="/einsaetze" className={item}>
+                    Einsätze
+                  </a>
+                )}
                 <a href="/koppeln" className={item}>
                   Telegram-Kopplung
                 </a>
@@ -145,6 +130,9 @@ export default function AppHeader({
             ) : (
               <>
                 <div className={gruppe}>Spieler</div>
+                <a href="/mannschaft" className={item}>
+                  Meine Mannschaft
+                </a>
                 <a href="/meine-spieltage" className={item}>
                   Meine Spieltage
                 </a>

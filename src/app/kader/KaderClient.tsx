@@ -179,39 +179,30 @@ export default function KaderClient({
 
             {/* Detailzeile */}
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {/* Kanal + Proxy */}
+              {/* Proxy: jemand trägt für diesen Spieler ein */}
               <label className="text-[12px] text-slate-600">
-                Kanal
-                <div className="mt-1 flex gap-2">
-                  <select
-                    defaultValue={p.kanal}
-                    onChange={(e) => saveStamm(p, { kanal: e.target.value })}
-                    className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
-                  >
-                    <option value="telegram">Telegram</option>
-                    <option value="webapp">Webapp</option>
-                    <option value="proxy">Proxy</option>
-                    <option value="email">E-Mail</option>
-                  </select>
-                  {p.kanal === "proxy" && (
-                    <select
-                      defaultValue={p.proxy_spieler_id ?? ""}
-                      onChange={(e) =>
-                        saveStamm(p, { proxy_spieler_id: e.target.value })
-                      }
-                      className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
-                    >
-                      <option value="">— trägt ein —</option>
-                      {teamMembers
-                        .filter((m) => m.id !== p.id)
-                        .map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                    </select>
-                  )}
-                </div>
+                Trägt für ihn ein (Proxy)
+                <select
+                  defaultValue={p.proxy_spieler_id ?? ""}
+                  onChange={(e) =>
+                    saveStamm(
+                      p,
+                      e.target.value
+                        ? { proxy_spieler_id: e.target.value, kanal: "proxy" }
+                        : { proxy_spieler_id: null, kanal: "telegram" }
+                    )
+                  }
+                  className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                >
+                  <option value="">— niemand —</option>
+                  {teamMembers
+                    .filter((m) => m.id !== p.id)
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                </select>
               </label>
 
               {/* Präferenzen */}

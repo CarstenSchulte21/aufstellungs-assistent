@@ -38,17 +38,24 @@ export default async function KaderPage({
   const selectedTeamId =
     teams.find((t) => t.id === searchParams.team)?.id ?? teams[0]?.id ?? "";
 
-  // Meldungs-Info je Spieler (Team + Position) — für Badges „gemeldet in X"
+  // Meldungs-Info je Spieler (Team + Position + Nummer) — für Badges + Filter
   const { data: meldAll } = await supabase
     .from("meldungen")
-    .select("spieler_id, position, mannschaften:mannschaft_id(name)")
+    .select("spieler_id, position, mannschaften:mannschaft_id(name, nummer)")
     .eq("halbserie_id", halbserieId);
-  const meldInfo = new Map<string, { teamName: string; position: number }>();
+  const meldInfo = new Map<
+    string,
+    { teamName: string; position: number; nummer: number }
+  >();
   for (const m of meldAll ?? [])
     meldInfo.set((m as any).spieler_id, {
       teamName: (m as any).mannschaften?.name ?? "",
       position: (m as any).position ?? 0,
+      nummer: (m as any).mannschaften?.nummer ?? 0,
     });
+
+  const selNummer =
+    teams.find((t) => t.id === selectedTeamId)?.nummer ?? 0;
 
   // Aktueller Stamm je Spieler (für die Auswahl-Picker)
   const { data: stammAll } = await supabase
@@ -161,13 +168,18 @@ export default async function KaderPage({
     }))
     .sort((a, b) => (b.qttr ?? 0) - (a.qttr ?? 0));
 
-  // Kandidaten zum Hinzufügen (alle Spieler, die im Team noch nicht drin sind)
+  // Kandidaten zum Hinzufügen: im Team noch nicht drin UND in dieser oder einer
+  // tieferen Mannschaft gemeldet (höher gemeldete könnten hier nie spielen).
   const { data: alleSpieler } = await supabase
     .from("spieler")
     .select("id, name")
     .order("name");
   const kandidaten: KandidatRow[] = (alleSpieler ?? [])
-    .filter((p: any) => !imTeam.has(p.id))
+    .filter((p: any) => {
+      if (imTeam.has(p.id)) return false;
+      const nummer = meldInfo.get(p.id)?.nummer;
+      return nummer != null && nummer >= selNummer;
+    })
     .map((p: any) => ({
       id: p.id,
       name: p.name,

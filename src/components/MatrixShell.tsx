@@ -187,30 +187,36 @@ export default function MatrixShell({
                     {sichtbareDays.map((d) => {
                       const st = dayStats(d);
                       const ok = st.zu >= st.need;
-                      return (
-                        <th key={d.id} className="px-1.5 py-2 align-bottom">
-                          <a
-                            href={`/spieltag/${d.id}`}
-                            className={`block w-full rounded-lg border px-2 py-1.5 text-left transition hover:shadow ${
-                              ok
-                                ? "border-slate-200 bg-slate-50"
-                                : "border-amber-300 bg-amber-50"
+                      const kannDetail = isAdmin || isMf;
+                      const inhalt = (
+                        <>
+                          <div className="text-[11px] font-bold text-slate-700">
+                            {fmtDatum(d.datum)}
+                          </div>
+                          <div className="max-w-[92px] truncate text-[10px] text-slate-500">
+                            {d.heim ? "H" : "A"} · {d.gegner}
+                          </div>
+                          <div
+                            className={`mt-1 text-[11px] font-bold ${
+                              ok ? "text-emerald-600" : "text-amber-600"
                             }`}
                           >
-                            <div className="text-[11px] font-bold text-slate-700">
-                              {fmtDatum(d.datum)}
-                            </div>
-                            <div className="max-w-[92px] truncate text-[10px] text-slate-500">
-                              {d.heim ? "H" : "A"} · {d.gegner}
-                            </div>
-                            <div
-                              className={`mt-1 text-[11px] font-bold ${
-                                ok ? "text-emerald-600" : "text-amber-600"
-                              }`}
-                            >
-                              {st.zu}/{st.need} {ok ? "✓" : "⚠"}
-                            </div>
-                          </a>
+                            {st.zu}/{st.need} {ok ? "✓" : "⚠"}
+                          </div>
+                        </>
+                      );
+                      const boxCls = `block w-full rounded-lg border px-2 py-1.5 text-left ${
+                        ok ? "border-slate-200 bg-slate-50" : "border-amber-300 bg-amber-50"
+                      }`;
+                      return (
+                        <th key={d.id} className="px-1.5 py-2 align-bottom">
+                          {kannDetail ? (
+                            <a href={`/spieltag/${d.id}`} className={`${boxCls} transition hover:shadow`}>
+                              {inhalt}
+                            </a>
+                          ) : (
+                            <div className={boxCls}>{inhalt}</div>
+                          )}
                         </th>
                       );
                     })}

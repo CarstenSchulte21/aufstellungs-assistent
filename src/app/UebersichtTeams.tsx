@@ -44,7 +44,7 @@ export default function UebersichtTeams({
     <section>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <h1 className="text-[15px] font-bold text-slate-800">
-          Vereins-Übersicht je Mannschaft
+          Spieltagsübersicht
         </h1>
         {maxLen > 1 && (
           <div className="ml-auto flex items-center gap-1">
