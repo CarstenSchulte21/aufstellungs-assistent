@@ -52,6 +52,7 @@ export async function loadSpielerAufgaben(
       .select("id, datum, heim, gegner")
       .eq("mannschaft_id", stamm.mannschaft_id)
       .eq("halbserie_id", halbserieId)
+      .neq("status", "abgesetzt")
       .gte("datum", heute)
       .order("datum");
     const spielIds = (spiele ?? []).map((s: any) => s.id);

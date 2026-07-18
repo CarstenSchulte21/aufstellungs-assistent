@@ -42,7 +42,7 @@ export async function GET(req: Request): Promise<Response> {
     .from("verfuegbarkeiten")
     .select(
       "id, spieler_id, spiel_id, status, erinnert_count, updated_at, " +
-        "spiele:spiel_id(datum, mannschaft_id, halbserie_id), spieler:spieler_id(telegram_chat_id)"
+        "spiele:spiel_id(datum, mannschaft_id, halbserie_id, status), spieler:spieler_id(telegram_chat_id)"
     )
     .in("status", ["angefragt", "erinnert"]);
 
@@ -53,6 +53,7 @@ export async function GET(req: Request): Promise<Response> {
     const spiel = (v as any).spiele;
     const chat = (v as any).spieler?.telegram_chat_id;
     if (!spiel || spiel.halbserie_id !== hs.id) continue;
+    if (spiel.status === "abgesetzt") continue; // abgesetztes Spiel
     if (spiel.datum < heute) continue; // Spiel vorbei
     if (!chat) continue; // nur gekoppelte Spieler erinnern
 

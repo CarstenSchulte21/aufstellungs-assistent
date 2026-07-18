@@ -92,6 +92,7 @@ export async function loadInbox(
     .select("id, datum, heim, gegner, mannschaft_id")
     .eq("halbserie_id", halbserieId)
     .in("mannschaft_id", meineTeamIds)
+    .neq("status", "abgesetzt")
     .gte("datum", heute)
     .order("datum", { ascending: true });
   const spielIds = (spiele ?? []).map((s: any) => s.id);

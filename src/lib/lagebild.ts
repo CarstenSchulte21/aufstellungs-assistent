@@ -82,6 +82,7 @@ export async function loadLagebild(supabase: SupabaseClient): Promise<{
     .from("spiele")
     .select("id, datum, heim, gegner, mannschaft_id")
     .eq("halbserie_id", halbserieId)
+    .neq("status", "abgesetzt")
     .gte("datum", heute)
     .order("datum", { ascending: true });
 

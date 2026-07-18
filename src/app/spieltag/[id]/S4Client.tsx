@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Kandidat } from "@/lib/engine/kandidaten";
+import SpielAendern, { type BearbeitenData } from "./SpielAendern";
 
 export type S4Player = {
   id: string;
@@ -58,6 +59,7 @@ export default function S4Client({
   parallelTeams,
   kandidaten = [],
   anfragen = [],
+  bearbeiten,
 }: {
   spiel: Spiel;
   zu: number;
@@ -66,6 +68,7 @@ export default function S4Client({
   parallelTeams: string[];
   kandidaten?: Kandidat[];
   anfragen?: ErsatzAnfrage[];
+  bearbeiten?: BearbeitenData;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -271,6 +274,11 @@ export default function S4Client({
               ))}
             </div>
           </div>
+        )}
+
+        {/* Spiel bearbeiten (Verlegung / Heimrecht / Absetzen) */}
+        {istMf && bearbeiten && (
+          <SpielAendern spielId={spiel.id} data={bearbeiten} />
         )}
 
         {/* Ersatzvorschläge (S8) */}
