@@ -3,6 +3,15 @@ import { heuteBerlin } from "@/lib/cron";
 
 export type Ansprechpartner = { name: string; telefon: string | null };
 
+export type TeamGame = {
+  spielId: string;
+  datum: string;
+  heim: boolean;
+  gegner: string;
+  zu: number;
+  abgesagt: number;
+};
+
 export type TeamUebersicht = {
   teamId: string;
   nummer: number;
@@ -10,14 +19,7 @@ export type TeamUebersicht = {
   benoetigt: number;
   mf: Ansprechpartner | null;
   stellv: Ansprechpartner | null;
-  next: {
-    spielId: string;
-    datum: string;
-    heim: boolean;
-    gegner: string;
-    zu: number;
-    abgesagt: number;
-  } | null;
+  naechste: TeamGame[];
 };
 
 export type Luecke = {
@@ -112,9 +114,18 @@ export async function loadLagebild(supabase: SupabaseClient): Promise<{
   }
   const spielById = new Map<string, any>((spiele ?? []).map((s: any) => [s.id, s]));
 
-  // Übersicht je Mannschaft (nächstes Spiel)
+  // Übersicht je Mannschaft (alle kommenden Spiele, nach Datum sortiert)
   const uebersicht: TeamUebersicht[] = (teams ?? []).map((t: any) => {
-    const naechstes = (spiele ?? []).find((s: any) => s.mannschaft_id === t.id);
+    const naechste: TeamGame[] = (spiele ?? [])
+      .filter((s: any) => s.mannschaft_id === t.id)
+      .map((s: any) => ({
+        spielId: s.id,
+        datum: s.datum,
+        heim: s.heim,
+        gegner: s.gegner,
+        zu: zuVon.get(s.id) ?? 0,
+        abgesagt: abVon.get(s.id) ?? 0,
+      }));
     return {
       teamId: t.id,
       nummer: t.nummer,
@@ -122,16 +133,7 @@ export async function loadLagebild(supabase: SupabaseClient): Promise<{
       benoetigt: t.spielstaerke,
       mf: t.mannschaftsfuehrer_id ? partnerVon.get(t.mannschaftsfuehrer_id) ?? null : null,
       stellv: t.stellv_mf_id ? partnerVon.get(t.stellv_mf_id) ?? null : null,
-      next: naechstes
-        ? {
-            spielId: naechstes.id,
-            datum: naechstes.datum,
-            heim: naechstes.heim,
-            gegner: naechstes.gegner,
-            zu: zuVon.get(naechstes.id) ?? 0,
-            abgesagt: abVon.get(naechstes.id) ?? 0,
-          }
-        : null,
+      naechste,
     };
   });
 
