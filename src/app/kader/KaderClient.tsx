@@ -10,6 +10,8 @@ export type KaderPlayer = {
   id: string;
   name: string;
   position: number;
+  gemeldetHier: boolean;
+  meldungTeamName: string;
   qttr: number;
   kanal: string;
   telefon: string;
@@ -113,10 +115,12 @@ export default function KaderClient({
 
   return (
     <div>
+      <div className="mb-1 text-[14px] font-bold text-slate-800">
+        Stamm ({players.length})
+      </div>
       <div className="mb-3 text-[13px] text-slate-500">
-        {players.length} Spieler gemeldet · {aktiv} aktiv. Nur aktive Spieler
-        werden vom Bot angefragt; die Regel-Engine kennt weiterhin alle
-        Gemeldeten.
+        {aktiv} aktiv. Stammspieler werden für Spieltage automatisch angefragt.
+        Die Regel-Engine rechnet unabhängig davon auf der offiziellen Meldung.
       </div>
 
       <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
@@ -124,7 +128,7 @@ export default function KaderClient({
           <div key={p.id} className="p-4">
             <div className="flex flex-wrap items-center gap-3">
               <span className="w-5 text-right text-[12px] font-bold text-slate-300">
-                {p.position}
+                {p.gemeldetHier ? p.position : "·"}
               </span>
               <div className="mr-auto min-w-[150px]">
                 <div
@@ -133,6 +137,11 @@ export default function KaderClient({
                   }`}
                 >
                   {p.name}
+                  {!p.gemeldetHier && p.meldungTeamName && (
+                    <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">
+                      gemeldet in {p.meldungTeamName}
+                    </span>
+                  )}
                 </div>
                 <div className="text-[12px] text-slate-500">
                   QTTR {p.qttr}
