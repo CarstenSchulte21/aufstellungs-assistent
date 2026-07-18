@@ -57,8 +57,18 @@ export async function getSession(): Promise<SessionInfo | null> {
       : "spieler";
 
   const isAdmin = modus === "admin";
-  const isMf = modus === "mf" || (modus === "admin" && realIsMf);
-  const effMfTeams = modus === "spieler" ? [] : mfTeams;
+  // Im Admin-Modus zählen ALLE Mannschaften als „geführt" – der Admin darf für
+  // jedes Team handeln (Ersatz anfordern, freigeben, einplanen …).
+  const isMf = modus === "mf" || modus === "admin";
+  let effMfTeams: string[];
+  if (modus === "spieler") {
+    effMfTeams = [];
+  } else if (modus === "admin") {
+    const { data: alle } = await supabase.from("mannschaften").select("id");
+    effMfTeams = (alle ?? []).map((m: any) => m.id);
+  } else {
+    effMfTeams = mfTeams;
+  }
 
   return {
     userId: user.id,
