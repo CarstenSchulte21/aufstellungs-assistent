@@ -13,6 +13,7 @@ export type S4Player = {
   status: string;
   kommentar: string | null;
   ersatzHerkunft?: number | null;
+  favorit?: boolean;
 };
 
 export type ErsatzAnfrage = {
@@ -201,7 +202,11 @@ export default function S4Client({
                       className={`rounded px-1.5 py-0.5 text-[12px] font-medium ${g.tone}`}
                     >
                       {p.name}
-                      {p.ersatzHerkunft ? ` (Ersatz ${p.ersatzHerkunft}.M.)` : ""}
+                      {p.favorit
+                        ? " (Favorit)"
+                        : p.ersatzHerkunft
+                        ? ` (Ersatz ${p.ersatzHerkunft}.M.)`
+                        : ""}
                       {p.kommentar ? " 💬" : ""}
                     </span>
                   ))}
@@ -229,9 +234,14 @@ export default function S4Client({
                 >
                   <span className="mr-auto min-w-[130px] text-sm text-slate-800">
                     <span className="mr-2 text-[11px] font-bold text-slate-300">
-                      {p.position}
+                      {p.favorit || p.ersatzHerkunft ? "" : p.position}
                     </span>
                     {p.name}
+                    {p.favorit && (
+                      <span className="ml-2 rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">
+                        Favorit
+                      </span>
+                    )}
                   </span>
                   <select
                     defaultValue=""

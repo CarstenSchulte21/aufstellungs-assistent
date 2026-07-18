@@ -92,7 +92,54 @@ export default async function SpieltagPage({
     })
     .sort((a, b) => a.position - b.position);
 
-  // Ersatzspieler: Verfügbarkeit für dieses Spiel, aber nicht in der Meldung
+  // Favoriten der Mannschaft: anzeigen + gezielt anfragen (nicht automatisch)
+  const { data: favZ } = await supabase
+    .from("kader_zuordnung")
+    .select("spieler_id")
+    .eq("mannschaft_id", (spiel as any).mannschaft_id)
+    .eq("halbserie_id", (spiel as any).halbserie_id)
+    .eq("rolle", "favorit");
+  const favIds: string[] = (favZ ?? [])
+    .map((z: any) => z.spieler_id)
+    .filter((id: string) => !stammIds.includes(id));
+  if (favIds.length > 0) {
+    const { data: favSp } = await supabase
+      .from("spieler")
+      .select("id, name")
+      .in("id", favIds);
+    const favName = new Map<string, string>(
+      (favSp ?? []).map((s: any) => [s.id as string, s.name as string])
+    );
+    const { data: favMeld } = await supabase
+      .from("meldungen")
+      .select("spieler_id, mannschaften:mannschaft_id(nummer)")
+      .eq("halbserie_id", (spiel as any).halbserie_id)
+      .in("spieler_id", favIds);
+    const favNummer = new Map<string, number>(
+      (favMeld ?? []).map((m: any) => [
+        m.spieler_id as string,
+        (m.mannschaften?.nummer ?? 0) as number,
+      ])
+    );
+    for (const id of favIds) {
+      const kaderStatus = (kaderMap.get(id) ?? "aktiv") as any;
+      const v = vMap.get(id) as any;
+      const nummer = favNummer.get(id) ?? 0;
+      players.push({
+        id,
+        name: favName.get(id) ?? "—",
+        position: 850,
+        kaderStatus,
+        status:
+          kaderStatus !== "aktiv" ? kaderStatus : v?.status ?? "nicht_angefragt",
+        kommentar: v?.kommentar ?? null,
+        favorit: true,
+        ersatzHerkunft: nummer && nummer !== teamNummer ? nummer : null,
+      });
+    }
+  }
+
+  // Ersatzspieler: Verfügbarkeit für dieses Spiel, aber nicht im Kader
   const rosterIds = new Set(players.map((p) => p.id));
   const ersatzIds = (Array.from(vMap.keys()) as string[]).filter(
     (id) => !rosterIds.has(id)
