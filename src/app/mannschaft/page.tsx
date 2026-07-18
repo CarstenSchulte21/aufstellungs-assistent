@@ -57,7 +57,9 @@ export default async function MannschaftPage({
       isAdmin={session.isAdmin}
       isMf={session.isMf}
       realIsAdmin={session.realIsAdmin}
-      viewAs={session.viewAs}
+      realIsMf={session.realIsMf}
+      hatManagement={session.hatManagement}
+      spielerModus={session.spielerModus}
       basePath="/mannschaft"
     />
   );

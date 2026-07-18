@@ -8,7 +8,9 @@ type Props = {
   isAdmin?: boolean; // effektiv
   isMf?: boolean; // effektiv
   realIsAdmin?: boolean;
-  viewAs?: string | null;
+  realIsMf?: boolean;
+  hatManagement?: boolean;
+  spielerModus?: boolean;
   inboxCount?: number;
 };
 
@@ -17,32 +19,30 @@ export default function AppHeader({
   isAdmin = false,
   isMf = false,
   realIsAdmin = false,
-  viewAs = null,
+  hatManagement = false,
+  spielerModus = false,
   inboxCount = 0,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const bar =
     "rounded-md bg-white/10 px-3 py-1.5 text-sm font-medium text-blue-50 transition hover:bg-white/20";
-  const item =
-    "block rounded px-3 py-2 text-sm text-slate-700 hover:bg-slate-100";
+  const item = "block rounded px-3 py-2 text-sm text-slate-700 hover:bg-slate-100";
   const gruppe =
     "mt-1 px-3 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400";
 
-  const rolleLabel = isAdmin
-    ? "Admin"
-    : isMf
-    ? "Mannschaftsführer"
-    : "Spieler";
+  const mgmtLabel = realIsAdmin ? "Admin" : "Mannschaftsführer";
+  const modusLabel = spielerModus ? "Spieler" : mgmtLabel;
 
-  function setView(v: string) {
-    if (v) document.cookie = `view_as=${v}; path=/; max-age=86400`;
+  function setModus(v: string) {
+    if (v === "spieler")
+      document.cookie = "view_as=spieler; path=/; max-age=2592000";
     else document.cookie = "view_as=; path=/; max-age=0";
     router.refresh();
   }
 
   return (
-    <header className="relative bg-primary text-white">
+    <header className="sticky top-0 z-40 bg-primary text-white shadow-md">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-3">
         <a href="/" className="mr-auto flex items-center gap-3" title="Zur Übersicht">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-lg">
@@ -53,40 +53,33 @@ export default function AppHeader({
               Aufstellungs-Assistent
             </div>
             <div className="text-[11px] text-blue-200">
-              {userEmail} · {rolleLabel}
-              {viewAs && (
-                <span className="ml-1 rounded bg-amber-400 px-1 py-0.5 text-[9px] font-bold text-primary-dark">
-                  VORSCHAU
-                </span>
-              )}
+              {userEmail} · {modusLabel}
             </div>
           </div>
         </a>
 
-        {realIsAdmin && (
+        {hatManagement && (
           <label className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-[11px] text-blue-50">
-            Ansicht:
+            Modus:
             <select
-              value={viewAs ?? ""}
-              onChange={(e) => setView(e.target.value)}
+              value={spielerModus ? "spieler" : "mgmt"}
+              onChange={(e) => setModus(e.target.value)}
               className="rounded bg-primary-dark px-1 py-0.5 text-[12px] text-white outline-none"
             >
-              <option value="">Admin</option>
-              <option value="mannschaftsfuehrer">Mannschaftsführer</option>
+              <option value="mgmt">{mgmtLabel}</option>
               <option value="spieler">Spieler</option>
             </select>
           </label>
         )}
 
-        <a href="/" className={bar}>
-          Übersicht
-        </a>
-        <a href="/meine-spieltage" className={bar}>
-          Meine Spieltage
-        </a>
-        {(isAdmin || isMf) && (
+        {/* Schnellzugriff je Modus */}
+        {spielerModus || !hatManagement ? (
+          <a href="/meine-spieltage" className={bar}>
+            Meine Spieltage
+          </a>
+        ) : (
           <a href="/inbox" className={bar}>
-            Inbox
+            Aufgaben
             {inboxCount > 0 && (
               <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
                 {inboxCount}
@@ -94,6 +87,7 @@ export default function AppHeader({
             )}
           </a>
         )}
+
         <button onClick={() => setOpen((o) => !o)} className={bar}>
           Menü ▾
         </button>
@@ -103,22 +97,18 @@ export default function AppHeader({
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
           <div className="absolute right-4 top-full z-30 mt-1 w-64 rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl">
-            <div className={gruppe}>Allgemein</div>
-            <a href="/matrix" className={item}>
-              Saison-Matrix
-            </a>
-            <a href="/info" className={item}>
-              Info &amp; Hilfe
-            </a>
-
-            {(isAdmin || isMf) && (
+            {isAdmin || isMf ? (
               <>
-                <div className={gruppe}>Mannschaftsführung</div>
+                <div className={gruppe}>Mannschaft</div>
                 {isMf && (
                   <a href="/mannschaft" className={item}>
                     Meine Mannschaft
                   </a>
                 )}
+                <a href="/inbox" className={item}>
+                  Meine offenen Aufgaben
+                  {inboxCount > 0 ? ` (${inboxCount})` : ""}
+                </a>
                 <a href="/kader" className={item}>
                   Kader
                 </a>
@@ -131,19 +121,28 @@ export default function AppHeader({
                 <a href="/koppeln" className={item}>
                   Telegram-Kopplung
                 </a>
+                {isAdmin && (
+                  <>
+                    <div className={gruppe}>Verwaltung</div>
+                    <a href="/admin" className={item}>
+                      Verwaltung (Spielplan, Stammdaten, Führung)
+                    </a>
+                  </>
+                )}
               </>
-            )}
-
-            {isAdmin && (
+            ) : (
               <>
-                <div className={gruppe}>Verwaltung</div>
-                <a href="/admin" className={item}>
-                  Verwaltung (Spielplan, Stammdaten, Führung)
+                <div className={gruppe}>Spieler</div>
+                <a href="/meine-spieltage" className={item}>
+                  Meine Spieltage
                 </a>
               </>
             )}
 
             <div className="my-1 border-t border-slate-100" />
+            <a href="/info" className={item}>
+              Info &amp; Hilfe
+            </a>
             <form action="/auth/signout" method="post">
               <button
                 type="submit"

@@ -6,10 +6,12 @@ export type SessionInfo = {
   spielerId: string | null;
   rollen: string[];
   mfTeams: string[];
-  isAdmin: boolean; // effektiv (nach Vorschau-Umschaltung)
+  isAdmin: boolean; // effektiv (nach Modus-Umschaltung)
   isMf: boolean; // effektiv
-  realIsAdmin: boolean; // tatsächliche Admin-Rolle
-  viewAs: string | null; // aktive Vorschau-Rolle des Admins
+  realIsAdmin: boolean;
+  realIsMf: boolean;
+  hatManagement: boolean; // MF und/oder Admin -> Modus-Umschalter verfügbar
+  spielerModus: boolean; // aktuell in der Spieler-Sicht?
 };
 
 /** Liest die aktuelle Session + Rollen (oder null, wenn nicht eingeloggt). */
@@ -39,23 +41,18 @@ export async function getSession(): Promise<SessionInfo | null> {
 
   const realIsAdmin = rollen.includes("admin");
   const realIsMf = mfTeams.length > 0;
+  const hatManagement = realIsAdmin || realIsMf;
 
-  // Vorschau-als-Rolle (nur ein echter Admin darf herunterschalten)
-  const viewAsRaw = cookies().get("view_as")?.value ?? null;
-  const viewAs =
-    realIsAdmin && (viewAsRaw === "spieler" || viewAsRaw === "mannschaftsfuehrer")
-      ? viewAsRaw
-      : null;
+  // Modus: wer eine Management-Rolle hat, kann in die Spieler-Sicht wechseln.
+  const spielerModus = hatManagement && cookies().get("view_as")?.value === "spieler";
 
   let isAdmin = realIsAdmin;
   let isMf = realIsMf;
   let effMfTeams = mfTeams;
-  if (viewAs === "spieler") {
+  if (spielerModus) {
     isAdmin = false;
     isMf = false;
     effMfTeams = [];
-  } else if (viewAs === "mannschaftsfuehrer") {
-    isAdmin = false; // MF-Rechte/Teams bleiben wie tatsächlich
   }
 
   return {
@@ -66,6 +63,8 @@ export async function getSession(): Promise<SessionInfo | null> {
     isAdmin,
     isMf,
     realIsAdmin,
-    viewAs,
+    realIsMf,
+    hatManagement,
+    spielerModus,
   };
 }

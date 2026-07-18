@@ -44,7 +44,9 @@ export default async function MatrixPage({
       isAdmin={session.isAdmin}
       isMf={session.isMf}
       realIsAdmin={session.realIsAdmin}
-      viewAs={session.viewAs}
+      realIsMf={session.realIsMf}
+      hatManagement={session.hatManagement}
+      spielerModus={session.spielerModus}
       basePath="/matrix"
     />
   );
