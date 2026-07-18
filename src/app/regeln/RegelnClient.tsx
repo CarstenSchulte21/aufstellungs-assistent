@@ -151,22 +151,37 @@ export default function RegelnClient({
 
         <div className="mt-4">
           <div className="mb-1 text-[13px] font-medium text-slate-600">
-            Tabu-Spieler (werden nie als Ersatz vorgeschlagen)
+            Nicht als Ersatz anfragen
           </div>
+          <p className="mb-2 text-[11px] text-slate-400">
+            Diese Spieler werden für diese Mannschaft nicht als Ersatz
+            vorgeschlagen. Angezeigt werden nur Spieler aus tieferen
+            Mannschaften — nur sie kommen als Ersatz überhaupt in Frage.
+          </p>
           <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 p-2">
-            <div className="grid gap-1 sm:grid-cols-2">
-              {spieler.map((s) => (
-                <label key={s.id} className="flex items-center gap-2 text-[13px]">
-                  <input
-                    type="checkbox"
-                    checked={tabu.includes(s.id)}
-                    onChange={() => toggleTabu(s.id)}
-                  />
-                  {s.name}{" "}
-                  <span className="text-slate-400">· {s.team}. M.</span>
-                </label>
-              ))}
-            </div>
+            {spieler.length === 0 ? (
+              <p className="px-1 py-2 text-[12px] text-slate-400">
+                Keine tieferen Mannschaften — für diese Mannschaft gibt es keine
+                möglichen Ersatzspieler.
+              </p>
+            ) : (
+              <div className="grid gap-1 sm:grid-cols-2">
+                {spieler.map((s) => (
+                  <label
+                    key={s.id}
+                    className="flex items-center gap-2 text-[13px]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={tabu.includes(s.id)}
+                      onChange={() => toggleTabu(s.id)}
+                    />
+                    {s.name}{" "}
+                    <span className="text-slate-400">· {s.team}. M.</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

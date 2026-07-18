@@ -45,7 +45,9 @@ export default async function RegelnPage({
     );
   }
 
-  const teamId = teams.find((t) => t.id === searchParams.team)?.id ?? teams[0].id;
+  const selTeam = teams.find((t) => t.id === searchParams.team) ?? teams[0];
+  const teamId = selTeam.id;
+  const selNummer = selTeam.nummer;
 
   const { data: cfg } = await supabase
     .from("regel_config")
@@ -69,12 +71,16 @@ export default async function RegelnPage({
     .from("meldungen")
     .select("spieler_id, mannschaften:mannschaft_id(nummer), spieler:spieler_id(name)")
     .eq("halbserie_id", halbserieId);
+  // Nur Spieler, die überhaupt als Ersatz für diese Mannschaft in Frage kommen:
+  // aus tieferen Mannschaften (Ersatz immer nur nach oben). Spieler aus höheren
+  // oder derselben Mannschaft können nie Ersatz sein und werden nicht gelistet.
   const spielerOpts: SpielerOpt[] = (meld ?? [])
     .map((m: any) => ({
       id: m.spieler_id,
       name: m.spieler?.name ?? "—",
       team: m.mannschaften?.nummer ?? 0,
     }))
+    .filter((s: SpielerOpt) => s.team > selNummer)
     .sort((a: SpielerOpt, b: SpielerOpt) => a.team - b.team || a.name.localeCompare(b.name));
 
   return (
