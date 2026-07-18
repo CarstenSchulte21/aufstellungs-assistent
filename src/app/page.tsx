@@ -45,7 +45,7 @@ export default async function Uebersicht() {
   const { teams, luecken, doppelzusagen } = await loadLagebild(supabase);
   const inboxCount =
     session.isAdmin || session.isMf
-      ? (await loadInbox(supabase, { isAdmin: session.isAdmin, mfTeams: session.mfTeams })).length
+      ? (await loadInbox(supabase, { isAdmin: session.isAdmin, mfTeams: session.mfTeams, schnell: true })).length
       : 0;
 
   return (

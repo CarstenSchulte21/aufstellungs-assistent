@@ -16,11 +16,15 @@ function fmt(iso: string) {
 
 const TYP_UI: Record<InboxItem["typ"], { label: string; cls: string }> = {
   luecke: { label: "Lücke", cls: "bg-amber-100 text-amber-700" },
+  verlegung: { label: "Verlegung?", cls: "bg-rose-100 text-rose-700" },
   einplanen: { label: "Einplanen", cls: "bg-emerald-100 text-emerald-700" },
   abgelaufen: { label: "Abgelaufen", cls: "bg-rose-100 text-rose-600" },
   keine_antwort: { label: "Keine Antwort", cls: "bg-slate-200 text-slate-600" },
   unsicher: { label: "Unsicher", cls: "bg-amber-50 text-amber-700" },
   konflikt: { label: "Doppelzusage", cls: "bg-rose-100 text-rose-600" },
+  nicht_angefragt: { label: "Nicht angefragt", cls: "bg-amber-50 text-amber-700" },
+  kopplung: { label: "Kopplung", cls: "bg-blue-50 text-blue-700" },
+  meldung: { label: "Kader", cls: "bg-slate-100 text-slate-600" },
 };
 
 export default async function InboxPage() {
@@ -35,6 +39,7 @@ export default async function InboxPage() {
   const items = await loadInbox(supabase, {
     isAdmin: session.isAdmin,
     mfTeams: session.mfTeams,
+    schnell: false,
   });
 
   return (
@@ -66,10 +71,11 @@ export default async function InboxPage() {
           <div className="space-y-2">
             {items.map((it, i) => {
               const ui = TYP_UI[it.typ];
+              const href = it.href ?? (it.spielId ? `/spieltag/${it.spielId}` : "/");
               return (
                 <a
                   key={i}
-                  href={`/spieltag/${it.spielId}`}
+                  href={href}
                   className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:border-primary"
                 >
                   <span
@@ -83,9 +89,11 @@ export default async function InboxPage() {
                     </div>
                     <div className="text-[12px] text-slate-500">{it.detail}</div>
                   </div>
-                  <span className="text-[12px] text-slate-400">
-                    {fmt(it.datum)}
-                  </span>
+                  {it.datum && (
+                    <span className="text-[12px] text-slate-400">
+                      {fmt(it.datum)}
+                    </span>
+                  )}
                 </a>
               );
             })}
