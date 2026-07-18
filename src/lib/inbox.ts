@@ -2,7 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { heuteBerlin } from "@/lib/cron";
 
 export type InboxItem = {
-  typ: "luecke" | "einplanen" | "abgelaufen" | "keine_antwort" | "unsicher";
+  typ:
+    | "luecke"
+    | "einplanen"
+    | "abgelaufen"
+    | "keine_antwort"
+    | "unsicher"
+    | "konflikt";
   titel: string;
   detail: string;
   datum: string;
@@ -127,6 +133,92 @@ export async function loadInbox(
         spielId: s.id,
         ersatzanfrageId: (a as any).id,
       });
+  }
+
+  // Doppelzusagen, die eine meiner Mannschaften betreffen
+  const { data: meineZus } = await supabase
+    .from("verfuegbarkeiten")
+    .select("spiel_id, spieler_id")
+    .in("spiel_id", spielIds)
+    .eq("status", "zugesagt");
+  const meineZusList = (meineZus ?? [])
+    .map((v: any) => ({ spieler_id: v.spieler_id, spiel: spielById.get(v.spiel_id) }))
+    .filter((x: any) => x.spiel);
+  const dates = Array.from(new Set(meineZusList.map((x: any) => x.spiel.datum)));
+
+  if (dates.length > 0) {
+    const { data: tagSpiele } = await supabase
+      .from("spiele")
+      .select("id, datum, mannschaft_id")
+      .eq("halbserie_id", halbserieId)
+      .in("datum", dates as string[]);
+    const teamVonSpiel = new Map<string, { datum: string; team: string }>(
+      (tagSpiele ?? []).map((s: any) => [s.id, { datum: s.datum, team: s.mannschaft_id }])
+    );
+    const { data: tagZus } = await supabase
+      .from("verfuegbarkeiten")
+      .select("spiel_id, spieler_id")
+      .in("spiel_id", (tagSpiele ?? []).map((s: any) => s.id))
+      .eq("status", "zugesagt");
+    const teamsProSpielerTag = new Map<string, Set<string>>();
+    for (const v of tagZus ?? []) {
+      const info = teamVonSpiel.get((v as any).spiel_id);
+      if (!info) continue;
+      const key = `${(v as any).spieler_id}|${info.datum}`;
+      const set = teamsProSpielerTag.get(key) ?? new Set<string>();
+      set.add(info.team);
+      teamsProSpielerTag.set(key, set);
+    }
+
+    const konfliktIds = new Set<string>();
+    const konflikte: {
+      spieler_id: string;
+      datum: string;
+      spielId: string;
+      teamId: string;
+      andere: string[];
+    }[] = [];
+    const gesehen = new Set<string>();
+    for (const z of meineZusList as any[]) {
+      const key = `${z.spieler_id}|${z.spiel.datum}`;
+      const set = teamsProSpielerTag.get(key);
+      if (set && set.size >= 2) {
+        const dedupe = `${z.spieler_id}|${z.spiel.id}`;
+        if (gesehen.has(dedupe)) continue;
+        gesehen.add(dedupe);
+        konfliktIds.add(z.spieler_id);
+        konflikte.push({
+          spieler_id: z.spieler_id,
+          datum: z.spiel.datum,
+          spielId: z.spiel.id,
+          teamId: z.spiel.mannschaft_id,
+          andere: Array.from(set)
+            .filter((t) => t !== z.spiel.mannschaft_id)
+            .map((t) => nameVon.get(t) ?? ""),
+        });
+      }
+    }
+
+    const namen = new Map<string, string>();
+    if (konfliktIds.size > 0) {
+      const { data: sp } = await supabase
+        .from("spieler")
+        .select("id, name")
+        .in("id", Array.from(konfliktIds));
+      for (const s of sp ?? []) namen.set((s as any).id, (s as any).name);
+    }
+    for (const k of konflikte) {
+      items.push({
+        typ: "konflikt",
+        titel: `Doppelzusage: ${namen.get(k.spieler_id) ?? "Spieler"}`,
+        detail: `${nameVon.get(k.teamId) ?? ""} — hat am selben Tag auch bei ${k.andere.join(
+          ", "
+        )} zugesagt. Bitte mit dem/den anderen MF klären.`,
+        datum: k.datum,
+        teamName: nameVon.get(k.teamId) ?? "",
+        spielId: k.spielId,
+      });
+    }
   }
 
   items.sort((a, b) => a.datum.localeCompare(b.datum));

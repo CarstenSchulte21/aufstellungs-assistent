@@ -20,6 +20,7 @@ const TYP_UI: Record<InboxItem["typ"], { label: string; cls: string }> = {
   abgelaufen: { label: "Abgelaufen", cls: "bg-rose-100 text-rose-600" },
   keine_antwort: { label: "Keine Antwort", cls: "bg-slate-200 text-slate-600" },
   unsicher: { label: "Unsicher", cls: "bg-amber-50 text-amber-700" },
+  konflikt: { label: "Doppelzusage", cls: "bg-rose-100 text-rose-600" },
 };
 
 export default async function InboxPage() {
