@@ -12,6 +12,7 @@ type Props = {
   hatManagement?: boolean;
   modus?: "admin" | "mf" | "spieler";
   inboxCount?: number;
+  spielerCount?: number;
 };
 
 export default function AppHeader({
@@ -23,6 +24,7 @@ export default function AppHeader({
   hatManagement = false,
   modus = "spieler",
   inboxCount = 0,
+  spielerCount = 0,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -81,6 +83,11 @@ export default function AppHeader({
         {spielerModus || !hatManagement ? (
           <a href="/meine-spieltage" className={bar}>
             Meine Spieltage
+            {spielerCount > 0 && (
+              <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
+                {spielerCount}
+              </span>
+            )}
           </a>
         ) : (
           <a href="/inbox" className={bar}>

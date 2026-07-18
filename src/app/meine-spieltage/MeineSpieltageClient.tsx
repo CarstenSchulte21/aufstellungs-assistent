@@ -36,6 +36,25 @@ function fmt(iso: string) {
   });
 }
 
+function heute() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+const OFFEN_STATUS = ["angefragt", "erinnert", "keine_antwort"];
+
+type Aufgabe = {
+  titel: string;
+  detail: string;
+  datum: string;
+  anker: string;
+  cls: string;
+};
+
 const STATUS_UI: Record<string, { label: string; cls: string }> = {
   zugesagt: { label: "Zugesagt", cls: "bg-emerald-100 text-emerald-700" },
   abgesagt: { label: "Abgesagt", cls: "bg-rose-100 text-rose-600" },
@@ -139,6 +158,41 @@ export default function MeineSpieltageClient({
     router.push(`/meine-spieltage?fuer=${id}`);
   }
 
+  const h = heute();
+  const aufgaben: Aufgabe[] = [];
+  for (const s of spieltage) {
+    if (s.datum < h) continue;
+    const gegen = `${s.heim ? "Heim" : "Auswärts"} gegen ${s.gegner}`;
+    if (OFFEN_STATUS.includes(s.status))
+      aufgaben.push({
+        titel: "Verfügbarkeit offen",
+        detail: gegen,
+        datum: s.datum,
+        anker: `s-${s.id}`,
+        cls: "bg-amber-100 text-amber-700",
+      });
+    else if (s.status === "unsicher")
+      aufgaben.push({
+        titel: "Unsicher – bitte festlegen",
+        detail: gegen,
+        datum: s.datum,
+        anker: `s-${s.id}`,
+        cls: "bg-amber-50 text-amber-700",
+      });
+  }
+  for (const a of ersatzanfragen) {
+    if (a.datum < h) continue;
+    if (!["gesendet", "freigegeben"].includes(a.status)) continue;
+    aufgaben.push({
+      titel: "Ersatzanfrage offen",
+      detail: `Aushilfe für die ${a.teamNummer}. Mannschaft`,
+      datum: a.datum,
+      anker: `e-${a.id}`,
+      cls: "bg-blue-50 text-blue-700",
+    });
+  }
+  aufgaben.sort((x, y) => (x.datum < y.datum ? -1 : x.datum > y.datum ? 1 : 0));
+
   return (
     <div className="space-y-6">
       {proxyOpts.length > 1 && (
@@ -158,6 +212,34 @@ export default function MeineSpieltageClient({
         </label>
       )}
 
+      {/* Offene Aufgaben */}
+      {aufgaben.length > 0 && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+          <h2 className="mb-2 text-[15px] font-bold text-slate-800">
+            Das brauchst du noch ({aufgaben.length})
+          </h2>
+          <div className="space-y-1.5">
+            {aufgaben.map((a, i) => (
+              <a
+                key={i}
+                href={`#${a.anker}`}
+                className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2 text-[13px] hover:border-amber-300"
+              >
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[11px] font-semibold ${a.cls}`}
+                >
+                  {a.titel}
+                </span>
+                <span className="text-slate-600">{a.detail}</span>
+                <span className="ml-auto text-[12px] text-slate-400">
+                  {fmt(a.datum)}
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Spieltage */}
       <section>
         <h2 className="mb-2 text-[15px] font-bold text-slate-800">
@@ -172,7 +254,11 @@ export default function MeineSpieltageClient({
           {spieltage.map((s) => {
             const ui = STATUS_UI[s.status] ?? STATUS_UI.nicht_angefragt;
             return (
-              <div key={s.id} className="flex flex-wrap items-center gap-3 p-3">
+              <div
+                key={s.id}
+                id={`s-${s.id}`}
+                className="flex scroll-mt-4 flex-wrap items-center gap-3 p-3"
+              >
                 <div className="mr-auto">
                   <div className="text-sm font-medium text-slate-900">
                     {fmt(s.datum)} · {s.heim ? "Heim" : "Auswärts"} gegen{" "}
@@ -229,7 +315,11 @@ export default function MeineSpieltageClient({
               const offen = ["gesendet", "freigegeben"].includes(a.status);
               const zugesagt = a.status === "zugesagt" || a.status === "eingeplant";
               return (
-                <div key={a.id} className="flex flex-wrap items-center gap-3 p-3">
+                <div
+                  key={a.id}
+                  id={`e-${a.id}`}
+                  className="flex scroll-mt-4 flex-wrap items-center gap-3 p-3"
+                >
                   <div className="mr-auto">
                     <div className="text-sm font-medium text-slate-900">
                       {fmt(a.datum)} · {a.heim ? "Heim" : "Auswärts"} gegen{" "}

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth";
 import { loadLagebild } from "@/lib/lagebild";
 import { loadInbox } from "@/lib/inbox";
+import { loadSpielerAufgaben } from "@/lib/spielerinbox";
 import AppHeader from "@/components/AppHeader";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,9 @@ export default async function Uebersicht() {
     session.isAdmin || session.isMf
       ? (await loadInbox(supabase, { isAdmin: session.isAdmin, mfTeams: session.mfTeams, schnell: true })).length
       : 0;
+  const spielerCount = session.spielerId
+    ? (await loadSpielerAufgaben(supabase, session.spielerId)).length
+    : 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -59,6 +63,7 @@ export default async function Uebersicht() {
         hatManagement={session.hatManagement}
         modus={session.modus}
         inboxCount={inboxCount}
+        spielerCount={spielerCount}
       />
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-5">
         <section>
