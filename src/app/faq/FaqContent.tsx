@@ -1,0 +1,295 @@
+function Q({ frage, children }: { frage: string; children: React.ReactNode }) {
+  return (
+    <details className="group border-b border-slate-100 last:border-0">
+      <summary className="flex cursor-pointer list-none items-center gap-2 py-2.5 text-[14px] font-medium text-slate-800 marker:hidden">
+        <span className="text-slate-400 transition group-open:rotate-90">▸</span>
+        {frage}
+      </summary>
+      <div className="space-y-2 pb-3 pl-5 pr-1 text-[13px] leading-relaxed text-slate-600">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+function Abschnitt({
+  icon,
+  titel,
+  children,
+}: {
+  icon: string;
+  titel: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-4">
+      <h2 className="mb-1 text-[15px] font-bold text-slate-800">
+        {icon} {titel}
+      </h2>
+      <div>{children}</div>
+    </section>
+  );
+}
+
+export default function FaqContent() {
+  return (
+    <div className="space-y-4">
+      <p className="text-[13px] text-slate-500">
+        Kurzüberblick über alle Funktionen. Klick auf eine Frage, um die Antwort
+        aufzuklappen.
+      </p>
+
+      <Abschnitt icon="🏓" titel="Allgemein & Anmeldung">
+        <Q frage="Was macht der Aufstellungs-Assistent?">
+          <p>
+            Er hilft dem Verein, für jeden Spieltag rechtzeitig eine
+            vollständige Mannschaft zusammenzubekommen: Verfügbarkeiten per
+            Telegram abfragen, alles in einer Saison-Matrix sehen und bei Lücken
+            regelkonforme Ersatzspieler vorschlagen. Entscheiden tun immer
+            Menschen, nie das System automatisch.
+          </p>
+        </Q>
+        <Q frage="Welche Rollen gibt es?">
+          <p>
+            <strong>Spieler</strong> geben ihre Verfügbarkeit ab.{" "}
+            <strong>Mannschaftsführer (MF)</strong> planen ihre Mannschaft(en).{" "}
+            <strong>Admins</strong> verwalten Spielplan, Stammdaten und
+            Mannschaftsführung. Der <strong>Besitzer</strong> darf zusätzlich
+            Admin-Rechte vergeben. Eine Person kann mehrere Rollen haben.
+          </p>
+        </Q>
+        <Q frage="Wie melde ich mich an?">
+          <p>
+            Über die Web-App-Adresse: E-Mail eingeben, du bekommst einen
+            Anmelde-Link per Mail, draufklicken — fertig, ganz ohne Passwort.
+            Beim ersten Mal bestätigst du die Datenschutz-Einwilligung.
+          </p>
+        </Q>
+        <Q frage="Wie wird mein Profil zugeordnet?">
+          <p>
+            Über deine E-Mail-Adresse. Wichtig: Die Adresse muss vorher vom
+            Admin bei deinem Spieler hinterlegt sein — dann wirst du beim ersten
+            Login automatisch verknüpft. Erscheint ein Hinweis, dass kein
+            Spielerprofil verknüpft ist, stimmt die E-Mail nicht überein; wende
+            dich an den Admin.
+          </p>
+        </Q>
+        <Q frage="Ich habe mehrere Rollen — wie wechsle ich die Ansicht?">
+          <p>
+            Oben rechts im Kopf gibt es einen Modus-Umschalter (Admin,
+            Mannschaftsführer, Spieler). Deine eigene Verfügbarkeit pflegst du im
+            Spieler-Modus, die Mannschaftsplanung im MF-Modus.
+          </p>
+        </Q>
+      </Abschnitt>
+
+      <Abschnitt icon="💬" titel="Telegram-Bot">
+        <Q frage="Wie verbinde ich mich mit dem Bot?">
+          <p>
+            Dein Mannschaftsführer (oder Admin) erzeugt dir einen persönlichen
+            Kopplungs-Link. Den öffnest du einmalig, tippst in Telegram auf
+            Start — danach bekommst du die Abfragen automatisch.
+          </p>
+        </Q>
+        <Q frage="Wie beantworte ich eine Anfrage?">
+          <p>
+            Direkt im Chat mit den Buttons: Ja, Nein oder Unsicher. Du kannst
+            auch frei antworten (etwa bin dabei oder diesmal nicht) — das wird
+            automatisch erkannt. Antworten kannst du jederzeit ändern.
+          </p>
+        </Q>
+        <Q frage="Wann kommen Anfragen und Erinnerungen?">
+          <p>
+            Die Erstabfrage geht automatisch im eingestellten Vorlauf vor dem
+            Spieltag raus, danach bei Bedarf Erinnerungen. Beides steuert der MF
+            über die Regeln seiner Mannschaft.
+          </p>
+        </Q>
+        <Q frage="Ich habe in der App geantwortet — passt sich Telegram an?">
+          <p>
+            Ja. Antwortest du eine Ersatzanfrage in der App, wird die
+            ursprüngliche Telegram-Nachricht entsprechend aktualisiert.
+          </p>
+        </Q>
+      </Abschnitt>
+
+      <Abschnitt icon="👤" titel="Für Spieler">
+        <Q frage="Wo gebe ich Zu- und Absagen ein?">
+          <p>
+            Im Spieler-Modus unter Spieltagsplanung: alle Spiele deiner
+            Mannschaft mit Ein-Klick-Zusage oder -Absage. Oder direkt per
+            Telegram.
+          </p>
+        </Q>
+        <Q frage="Wie trage ich Urlaub oder Abwesenheit ein?">
+          <p>
+            Unter Spieltagsplanung einen Zeitraum als Abwesenheit anlegen — alle
+            Spieltage darin werden automatisch abgesagt. Löschst du die
+            Abwesenheit wieder, werden die automatischen Absagen zurückgenommen.
+          </p>
+        </Q>
+        <Q frage="Kann ich Präferenzen angeben?">
+          <p>
+            Ja, unten unter Spieltagsplanung: nur Heimspiele und keine
+            Doppeleinsätze. Das sind Hinweise für die Planung deines MF — keine
+            Garantie.
+          </p>
+        </Q>
+        <Q frage="Was ist eine Ersatzanfrage?">
+          <p>
+            Wenn einer höheren Mannschaft ein Spieler fehlt, kannst du gefragt
+            werden, ob du aushilfst. Solche Anfragen erscheinen bei dir (Telegram
+            und App) und du antwortest mit Ich helfe aus oder Diesmal nicht.
+          </p>
+        </Q>
+        <Q frage="Was ist die Proxy-Funktion?">
+          <p>
+            Für Mitspieler ohne Smartphone kann jemand anderes stellvertretend
+            eintragen. Bist du als Proxy hinterlegt, kannst du oben unter
+            Spieltagsplanung zwischen dir und den betreuten Spielern umschalten.
+          </p>
+        </Q>
+        <Q frage="Sehe ich, wie es in meiner Mannschaft steht?">
+          <p>
+            Ja — auf der Startseite siehst du die Matrix deiner Stamm-Mannschaft:
+            alle Spieltage mit Zu- und Absagen aller Teamkollegen (Lesemodus).
+          </p>
+        </Q>
+        <Q frage="Was bedeutet der Bereich Aufgaben?">
+          <p>
+            Auf der Startseite werden deine offenen Punkte gebündelt: noch nicht
+            beantwortete Anfragen, unsichere Zusagen und offene Ersatzanfragen.
+          </p>
+        </Q>
+      </Abschnitt>
+
+      <Abschnitt icon="📋" titel="Für Mannschaftsführer">
+        <Q frage="Was sehe ich auf der Startseite?">
+          <p>
+            Die Matrix deiner Mannschaft (alle Spieltage und Zusagen) und
+            darunter deine offenen Aufgaben. Führst du mehrere Teams, kannst du
+            oben umschalten.
+          </p>
+        </Q>
+        <Q frage="Wie fülle ich eine Lücke mit einem Ersatzspieler?">
+          <p>
+            Spieltag öffnen, im Bereich Ersatzvorschläge schlägt dir das System
+            regelkonforme Kandidaten vor (nur von unten, kein Sperrvermerk, nicht
+            am selben Tag verplant). Mit Anfrage stellen geht die Anfrage per
+            Telegram raus; sagt der Spieler zu, planst du ihn mit Fest einplanen
+            ein.
+          </p>
+        </Q>
+        <Q frage="Was sind Stamm und Favorit im Kader?">
+          <p>
+            <strong>Stamm</strong> = die Spieler, die für dein Team automatisch
+            gefragt werden (genau ein Stammplatz je Spieler).{" "}
+            <strong>Favoriten</strong> = zusätzliche Spieler, die du im Kader
+            siehst und pro Spieltag gezielt anfragen kannst, aber nicht
+            automatisch. So bildest du ab, wer real bei euch mitspielt, auch wenn
+            die offizielle Meldung abweicht.
+          </p>
+        </Q>
+        <Q frage="Wie pflege ich meinen Kader?">
+          <p>
+            Unter Kader: Status je Spieler (aktiv, pausiert, inaktiv), Notizen,
+            Proxy und Favoriten hinzufügen oder entfernen. Pausiert oder inaktiv
+            nimmt offene Abfragen automatisch zurück.
+          </p>
+        </Q>
+        <Q frage="Kann ich den Spielplan ändern (Verlegung, Ausfall)?">
+          <p>
+            Ja, im Spieltag-Detail unter Spiel bearbeiten: Termin verlegen,
+            Heimrecht und Ort tauschen oder das Spiel absetzen. Bei einem echten
+            Terminwechsel werden bestehende Zusagen zurückgesetzt und der Stamm
+            automatisch neu gefragt; alle Beteiligten werden informiert.
+          </p>
+        </Q>
+        <Q frage="Was stelle ich unter Regeln ein?">
+          <p>
+            Je Mannschaft: Sortierung der Kandidaten, Vorlauf der Erstabfrage,
+            Reminder-Rhythmus, Antwortfrist und welche Spieler nicht als Ersatz
+            angefragt werden sollen.
+          </p>
+        </Q>
+        <Q frage="Welche Aufgaben können auftauchen?">
+          <p>
+            Lücke (Ersatz suchen), Verlegung erwägen (kein Ersatz möglich),
+            Einplanen (Zusage liegt vor), keine Antwort, unsichere Zusage,
+            Doppelzusage (Spieler an zwei Teams), noch nicht angefragt, fehlende
+            Telegram-Kopplung und knapper Kader.
+          </p>
+        </Q>
+      </Abschnitt>
+
+      <Abschnitt icon="⚙️" titel="Für Admins & Besitzer">
+        <Q frage="Was finde ich unter Verwaltung?">
+          <p>
+            Spielplan aller Mannschaften, Stammdaten und Meldungen (Spieler,
+            Positionen, Sperrvermerk, RES, E-Mail) und die Mannschaftsführung
+            (MF und Stellvertreter je Team).
+          </p>
+        </Q>
+        <Q frage="Was zeigt der Bereich Einsätze?">
+          <p>
+            Wie oft jemand pro Mannschaft eingeplant wurde (Fairness-Überblick,
+            nur für Admins). Im WTTV gibt es kein Festspielen — die Zahlen dienen
+            nur der Übersicht.
+          </p>
+        </Q>
+        <Q frage="Wie mache ich jemanden zum Admin?">
+          <p>
+            Nur der Besitzer sieht Verwaltung, dort den Punkt Administratoren,
+            und kann angemeldeten Nutzern das Admin-Recht geben oder entziehen.
+            Ein normaler Admin kann selbst keine weiteren Admins ernennen.
+          </p>
+        </Q>
+        <Q frage="Wie gebe ich einer neuen Person Zugriff?">
+          <p>
+            Zuerst die E-Mail der Person beim Spieler in den Stammdaten
+            eintragen, dann die Web-App-Adresse weitergeben. Beim ersten Login
+            wird sie automatisch verknüpft. Die E-Mail also immer vor dem ersten
+            Login setzen.
+          </p>
+        </Q>
+      </Abschnitt>
+
+      <Abschnitt icon="⚖️" titel="Regeln & Ersatz (WTTV)">
+        <Q frage="Nach welchen Regeln werden Ersatzspieler vorgeschlagen?">
+          <p>
+            Ersatz wird immer nur von unten gestellt — auf Basis der offiziellen
+            Meldung. Ein Festspielen gibt es im WTTV nicht mehr, Ersatzeinsätze
+            sind also unbegrenzt. Das System filtert unzulässige Kandidaten hart
+            heraus und markiert weiche Hinweise wie Präferenzen.
+          </p>
+        </Q>
+        <Q frage="Was verhindert Doppel-Anfragen desselben Spielers?">
+          <p>
+            Ein Tages-Lock: Sobald ein Spieler für einen Tag offen angefragt ist,
+            kann ihn kein zweiter MF gleichzeitig anfragen. Doppelzusagen tauchen
+            zusätzlich als Aufgabe auf, damit die MF sich abstimmen.
+          </p>
+        </Q>
+        <Q frage="Was passiert bei Abwesenheit oder Pause automatisch?">
+          <p>
+            Eine Abwesenheit sagt betroffene Spieltage automatisch ab. Wird ein
+            Spieler auf pausiert oder inaktiv gesetzt, werden seine offenen
+            Abfragen und Ersatzanfragen zurückgezogen.
+          </p>
+        </Q>
+      </Abschnitt>
+
+      <Abschnitt icon="🔒" titel="Datenschutz">
+        <Q frage="Welche Daten werden verarbeitet und wer sieht was?">
+          <p>
+            Nur zur Spieltagsplanung des Vereins: Name, Kontaktdaten, deine Zu-
+            und Absagen sowie Abwesenheiten. In der Matrix sind für den Verein
+            nur deine Status sichtbar — Freitext-Kommentare sehen nur du, dein MF
+            und der Admin. Ohne deine Einwilligung bekommst du keine
+            Telegram-Nachrichten; den Widerruf regelst du mit deinem MF.
+          </p>
+        </Q>
+      </Abschnitt>
+    </div>
+  );
+}
