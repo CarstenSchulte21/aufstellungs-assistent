@@ -19,7 +19,7 @@ export default async function SpieltagPage({
   const { data: spiel } = await supabase
     .from("spiele")
     .select(
-      "id, spieltag_nr, datum, uhrzeit, heim, gegner, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name, spielstaerke)"
+      "id, spieltag_nr, datum, uhrzeit, heim, gegner, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name, nummer, spielstaerke)"
     )
     .eq("id", params.id)
     .maybeSingle();
@@ -30,13 +30,37 @@ export default async function SpieltagPage({
   const istMf =
     session.isAdmin || session.mfTeams.includes((spiel as any).mannschaft_id);
 
-  // Kader
-  const { data: meld } = await supabase
-    .from("meldungen")
-    .select("position, spieler:spieler_id(id, name)")
+  // Kader: operativer Stamm (kader_zuordnung), nicht die Meldung
+  const teamNummer = (spiel as any).mannschaften?.nummer ?? 0;
+  const { data: stammZ } = await supabase
+    .from("kader_zuordnung")
+    .select("spieler_id")
     .eq("mannschaft_id", (spiel as any).mannschaft_id)
     .eq("halbserie_id", (spiel as any).halbserie_id)
-    .order("position");
+    .eq("rolle", "stamm");
+  const stammIds: string[] = (stammZ ?? []).map((z: any) => z.spieler_id);
+
+  const { data: stammSp } = stammIds.length
+    ? await supabase.from("spieler").select("id, name").in("id", stammIds)
+    : { data: [] as any[] };
+  const spName = new Map<string, string>(
+    (stammSp ?? []).map((s: any) => [s.id as string, s.name as string])
+  );
+
+  const { data: meldRows } = stammIds.length
+    ? await supabase
+        .from("meldungen")
+        .select("spieler_id, position, mannschaften:mannschaft_id(nummer)")
+        .eq("halbserie_id", (spiel as any).halbserie_id)
+        .in("spieler_id", stammIds)
+    : { data: [] as any[] };
+  const meldPos = new Map<string, { position: number; nummer: number }>(
+    (meldRows ?? []).map((m: any) => [
+      m.spieler_id,
+      { position: m.position ?? 0, nummer: m.mannschaften?.nummer ?? 0 },
+    ])
+  );
+
   const { data: kader } = await supabase
     .from("kader_status")
     .select("spieler_id, status")
@@ -49,18 +73,24 @@ export default async function SpieltagPage({
     .eq("spiel_id", params.id);
   const vMap = new Map((verf ?? []).map((v: any) => [v.spieler_id, v]));
 
-  const players: S4Player[] = (meld ?? []).map((m: any) => {
-    const kaderStatus = kaderMap.get(m.spieler?.id) ?? "aktiv";
-    const v = vMap.get(m.spieler?.id) as any;
-    return {
-      id: m.spieler?.id,
-      name: m.spieler?.name ?? "—",
-      position: m.position,
-      kaderStatus,
-      status: kaderStatus !== "aktiv" ? kaderStatus : v?.status ?? "nicht_angefragt",
-      kommentar: v?.kommentar ?? null,
-    };
-  });
+  const players: S4Player[] = stammIds
+    .map((id: string): S4Player => {
+      const kaderStatus = (kaderMap.get(id) ?? "aktiv") as any;
+      const v = vMap.get(id) as any;
+      const mi = meldPos.get(id);
+      const gemeldetHier = mi?.nummer === teamNummer;
+      return {
+        id,
+        name: spName.get(id) ?? "—",
+        position: gemeldetHier ? mi?.position ?? 0 : 900,
+        kaderStatus,
+        status:
+          kaderStatus !== "aktiv" ? kaderStatus : v?.status ?? "nicht_angefragt",
+        kommentar: v?.kommentar ?? null,
+        ersatzHerkunft: mi && !gemeldetHier ? mi.nummer : null,
+      };
+    })
+    .sort((a, b) => a.position - b.position);
 
   // Ersatzspieler: Verfügbarkeit für dieses Spiel, aber nicht in der Meldung
   const rosterIds = new Set(players.map((p) => p.id));

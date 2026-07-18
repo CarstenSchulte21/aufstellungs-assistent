@@ -30,15 +30,16 @@ export async function POST(req: Request): Promise<Response> {
       .select("id")
       .eq("aktiv", true)
       .maybeSingle();
-    const { data: meld } = await admin
-      .from("meldungen")
+    const { data: stamm } = await admin
+      .from("kader_zuordnung")
       .select("mannschaft_id")
       .eq("spieler_id", spielerId)
       .eq("halbserie_id", hs?.id ?? "")
+      .eq("rolle", "stamm")
       .maybeSingle();
-    if (!meld) {
+    if (!stamm) {
       return NextResponse.json(
-        { error: "Spieler ist in der aktiven Halbserie nicht gemeldet" },
+        { error: "Spieler hat in der aktiven Halbserie keinen Stammplatz" },
         { status: 400 }
       );
     }
@@ -46,7 +47,7 @@ export async function POST(req: Request): Promise<Response> {
     const { data: spiel } = await admin
       .from("spiele")
       .select("id")
-      .eq("mannschaft_id", meld.mannschaft_id)
+      .eq("mannschaft_id", stamm.mannschaft_id)
       .eq("halbserie_id", hs?.id ?? "")
       .gte("datum", heute)
       .order("datum", { ascending: true })

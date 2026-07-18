@@ -62,11 +62,12 @@ export async function loadInbox(
       Number((r as any).config?.vorlauf_erstabfrage_tage ?? 28)
     );
 
-  // Kader je Mannschaft (aktiv + Kopplung)
-  const { data: meld } = await supabase
-    .from("meldungen")
+  // Operativer Stamm je Mannschaft (aktiv + Kopplung) — nicht die Meldung
+  const { data: stamm } = await supabase
+    .from("kader_zuordnung")
     .select("spieler_id, mannschaft_id, spieler:spieler_id(telegram_chat_id)")
     .eq("halbserie_id", halbserieId)
+    .eq("rolle", "stamm")
     .in("mannschaft_id", meineTeamIds);
   const { data: kader } = await supabase
     .from("kader_status")
@@ -77,7 +78,7 @@ export async function loadInbox(
   );
   const aktivCountVon = new Map<string, number>();
   const ohneKopplungVon = new Map<string, number>();
-  for (const m of meld ?? []) {
+  for (const m of stamm ?? []) {
     const aktiv = (kaderStatus.get((m as any).spieler_id) ?? "aktiv") === "aktiv";
     if (!aktiv) continue;
     const tid = (m as any).mannschaft_id;
@@ -325,7 +326,7 @@ export async function loadInbox(
       teamItems.push({
         typ: "meldung",
         titel: `Kader knapp: ${aktiv}/${benoetigt} aktiv`,
-        detail: `${teamName} — weniger aktive gemeldete Spieler als benötigt.`,
+        detail: `${teamName} — weniger aktive Stammspieler als benötigt.`,
         datum: "",
         teamName,
         href: `/admin/stammdaten`,

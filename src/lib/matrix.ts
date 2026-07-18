@@ -18,6 +18,8 @@ export type RosterPlayer = {
   res: boolean;
   kader_status: KaderStatus;
   ersatzHerkunft?: number | null; // Herkunfts-Mannschaft, wenn Ersatzspieler
+  favorit?: boolean; // Favorit statt Stamm
+  gemeldetInNummer?: number | null; // Meldemannschaft, falls abweichend
 };
 
 export type Day = {
@@ -80,13 +82,47 @@ export async function loadMatrix(
     .maybeSingle();
   if (!team) return null;
 
-  // Kader (Meldung + Spielerstammdaten), sortiert nach Position
-  const { data: meldungen } = await supabase
-    .from("meldungen")
-    .select("spieler_id, position, res, spieler:spieler_id(name, qttr)")
+  const teamNummer = (team as any).nummer ?? 0;
+
+  // Operativer Kader: Stamm + Favoriten (kader_zuordnung), nicht die Meldung.
+  const { data: zuord } = await supabase
+    .from("kader_zuordnung")
+    .select("spieler_id, rolle")
     .eq("mannschaft_id", teamId)
-    .eq("halbserie_id", halbserieId)
-    .order("position", { ascending: true });
+    .eq("halbserie_id", halbserieId);
+  const stammIds: string[] = (zuord ?? [])
+    .filter((z: any) => z.rolle === "stamm")
+    .map((z: any) => z.spieler_id);
+  const favoritIds: string[] = (zuord ?? [])
+    .filter((z: any) => z.rolle === "favorit")
+    .map((z: any) => z.spieler_id);
+  const alleIds = [...stammIds, ...favoritIds];
+
+  // Spielerstammdaten
+  const { data: spielerRows } = alleIds.length
+    ? await supabase.from("spieler").select("id, name, qttr").in("id", alleIds)
+    : { data: [] as any[] };
+  const spInfo = new Map<string, { name: string; qttr: number }>(
+    (spielerRows ?? []).map((s: any) => [s.id, { name: s.name, qttr: s.qttr }])
+  );
+
+  // Meldungs-Info (Position, RES, Meldemannschaft) für Anzeige
+  const { data: meldRows } = alleIds.length
+    ? await supabase
+        .from("meldungen")
+        .select("spieler_id, position, res, mannschaften:mannschaft_id(nummer)")
+        .eq("halbserie_id", halbserieId)
+        .in("spieler_id", alleIds)
+    : { data: [] as any[] };
+  const meldInfo = new Map<
+    string,
+    { position: number; res: boolean; nummer: number }
+  >(
+    (meldRows ?? []).map((m: any) => [
+      m.spieler_id,
+      { position: m.position ?? 0, res: !!m.res, nummer: m.mannschaften?.nummer ?? 0 },
+    ])
+  );
 
   // Operativer Kader-Status je Spieler
   const { data: kader } = await supabase
@@ -97,14 +133,44 @@ export async function loadMatrix(
     (kader ?? []).map((k: any) => [k.spieler_id, k.status])
   );
 
-  const roster: RosterPlayer[] = (meldungen ?? []).map((m: any) => ({
-    spieler_id: m.spieler_id,
-    name: m.spieler?.name ?? "—",
-    qttr: m.spieler?.qttr ?? 0,
-    position: m.position,
-    res: m.res,
-    kader_status: statusMap.get(m.spieler_id) ?? "aktiv",
-  }));
+  const stammRoster: RosterPlayer[] = stammIds.map((id: string) => {
+    const mi = meldInfo.get(id);
+    const gemeldetHier = mi?.nummer === teamNummer;
+    return {
+      spieler_id: id,
+      name: spInfo.get(id)?.name ?? "—",
+      qttr: spInfo.get(id)?.qttr ?? 0,
+      position: gemeldetHier ? mi?.position ?? 0 : 0,
+      res: mi?.res ?? false,
+      kader_status: statusMap.get(id) ?? "aktiv",
+      gemeldetInNummer: mi && !gemeldetHier ? mi.nummer : null,
+    };
+  });
+  stammRoster.sort((a, b) => {
+    const ah = a.gemeldetInNummer == null;
+    const bh = b.gemeldetInNummer == null;
+    if (ah !== bh) return ah ? -1 : 1;
+    if (ah && bh) return a.position - b.position;
+    return b.qttr - a.qttr;
+  });
+
+  const favoritRoster: RosterPlayer[] = favoritIds
+    .map((id: string) => {
+      const mi = meldInfo.get(id);
+      return {
+        spieler_id: id,
+        name: spInfo.get(id)?.name ?? "—",
+        qttr: spInfo.get(id)?.qttr ?? 0,
+        position: 800,
+        res: false,
+        kader_status: statusMap.get(id) ?? "aktiv",
+        favorit: true,
+        gemeldetInNummer: mi && mi.nummer !== teamNummer ? mi.nummer : null,
+      };
+    })
+    .sort((a, b) => b.qttr - a.qttr);
+
+  const roster: RosterPlayer[] = [...stammRoster, ...favoritRoster];
 
   // Spieltage
   const { data: spiele } = await supabase

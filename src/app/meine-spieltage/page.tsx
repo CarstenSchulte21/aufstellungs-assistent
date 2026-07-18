@@ -64,20 +64,21 @@ export default async function MeineSpieltagePage({
     .maybeSingle();
   const halbserieId = hs?.id ?? "";
 
-  // Mannschaft des Zielspielers
-  const { data: meld } = await supabase
-    .from("meldungen")
+  // Stamm-Mannschaft des Zielspielers (operative Ebene, nicht Meldung)
+  const { data: stamm } = await supabase
+    .from("kader_zuordnung")
     .select("mannschaft_id")
     .eq("spieler_id", zielId)
     .eq("halbserie_id", halbserieId)
+    .eq("rolle", "stamm")
     .maybeSingle();
 
   let spieltage: SpieltagRow[] = [];
-  if (meld?.mannschaft_id) {
+  if (stamm?.mannschaft_id) {
     const { data: spiele } = await supabase
       .from("spiele")
       .select("id, spieltag_nr, datum, heim, gegner")
-      .eq("mannschaft_id", meld.mannschaft_id)
+      .eq("mannschaft_id", stamm.mannschaft_id)
       .eq("halbserie_id", halbserieId)
       .order("datum");
     const spielIds = (spiele ?? []).map((s: any) => s.id);

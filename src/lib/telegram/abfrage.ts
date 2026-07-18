@@ -204,16 +204,18 @@ export async function aktualisiereErsatzNachricht(
   }
 }
 
-// Gekoppelte, aktive Spieler einer Mannschaft (mit Telegram-Chat).
+// Gekoppelte, aktive STAMM-Spieler einer Mannschaft (mit Telegram-Chat).
+// Operative Ebene: gefragt wird der Stamm (kader_zuordnung), nicht die Meldung.
 export async function gekoppelteSpieler(
   admin: SupabaseClient,
   spiel: SpielInfo
 ): Promise<{ spieler_id: string; chat_id: number }[]> {
-  const { data: meld } = await admin
-    .from("meldungen")
+  const { data: stamm } = await admin
+    .from("kader_zuordnung")
     .select("spieler_id, spieler:spieler_id(telegram_chat_id)")
     .eq("mannschaft_id", spiel.mannschaft_id)
-    .eq("halbserie_id", spiel.halbserie_id);
+    .eq("halbserie_id", spiel.halbserie_id)
+    .eq("rolle", "stamm");
 
   const { data: kader } = await admin
     .from("kader_status")
@@ -224,7 +226,7 @@ export async function gekoppelteSpieler(
   );
 
   const out: { spieler_id: string; chat_id: number }[] = [];
-  for (const m of meld ?? []) {
+  for (const m of stamm ?? []) {
     const chat = (m as any).spieler?.telegram_chat_id;
     if (chat && aktiv.has((m as any).spieler_id)) {
       out.push({ spieler_id: (m as any).spieler_id, chat_id: Number(chat) });

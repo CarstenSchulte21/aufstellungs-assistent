@@ -24,18 +24,19 @@ async function findNextSpiel(
     .eq("aktiv", true)
     .maybeSingle();
   if (!hs) return null;
-  const { data: meld } = await admin
-    .from("meldungen")
+  const { data: stamm } = await admin
+    .from("kader_zuordnung")
     .select("mannschaft_id")
     .eq("spieler_id", spielerId)
     .eq("halbserie_id", hs.id)
+    .eq("rolle", "stamm")
     .maybeSingle();
-  if (!meld) return null;
+  if (!stamm) return null;
   const heute = new Date().toISOString().slice(0, 10);
   const { data: spiel } = await admin
     .from("spiele")
     .select("id")
-    .eq("mannschaft_id", meld.mannschaft_id)
+    .eq("mannschaft_id", stamm.mannschaft_id)
     .eq("halbserie_id", hs.id)
     .gte("datum", heute)
     .order("datum", { ascending: true })

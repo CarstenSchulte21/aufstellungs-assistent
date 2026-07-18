@@ -221,7 +221,9 @@ export default function MatrixShell({
                     <tr key={p.spieler_id} className="border-t border-slate-100">
                       <td className="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-1.5">
                         <span className="mr-2 inline-block w-5 text-right text-[11px] font-bold text-slate-300">
-                          {p.ersatzHerkunft ? "" : p.position}
+                          {p.ersatzHerkunft || p.favorit || p.gemeldetInNummer
+                            ? ""
+                            : p.position}
                         </span>
                         <span
                           className={
@@ -235,6 +237,16 @@ export default function MatrixShell({
                         {p.ersatzHerkunft && (
                           <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700">
                             Ersatz · {p.ersatzHerkunft}. M.
+                          </span>
+                        )}
+                        {p.favorit && (
+                          <span className="ml-2 rounded bg-violet-50 px-1.5 py-0.5 text-[11px] font-semibold text-violet-700">
+                            Favorit
+                          </span>
+                        )}
+                        {p.gemeldetInNummer && (
+                          <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500">
+                            gem. {p.gemeldetInNummer}. M.
                           </span>
                         )}
                         {p.kader_status === "pausiert" && (

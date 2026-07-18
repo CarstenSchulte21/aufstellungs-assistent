@@ -5,6 +5,7 @@ import {
   type EngineConfig,
   type Kandidat,
 } from "./kandidaten";
+import { ladeEffektiveKaderIds } from "@/lib/kader";
 
 // Sammelt alle nötigen Daten aus der DB und ruft die reine Engine auf.
 export async function ladeKandidaten(
@@ -128,5 +129,12 @@ export async function ladeKandidaten(
     config,
   });
 
-  return { kandidaten: result, teamNummer };
+  // Spieler, die schon im operativen Kader dieser Mannschaft stehen (Stamm oder
+  // Favorit), werden nicht als Ersatz angeboten — sie gehören ohnehin dazu.
+  const imKader = new Set(
+    await ladeEffektiveKaderIds(supabase, hs, (spiel as any).mannschaft_id)
+  );
+  const gefiltert = result.filter((k) => !imKader.has(k.id));
+
+  return { kandidaten: gefiltert, teamNummer };
 }

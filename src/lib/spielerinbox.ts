@@ -35,21 +35,22 @@ export async function loadSpielerAufgaben(
     .maybeSingle();
   const halbserieId = hs?.id ?? "";
 
-  // Eigene Mannschaft in der aktiven Halbserie
-  const { data: meld } = halbserieId
+  // Stamm-Mannschaft in der aktiven Halbserie (operative Ebene)
+  const { data: stamm } = halbserieId
     ? await supabase
-        .from("meldungen")
+        .from("kader_zuordnung")
         .select("mannschaft_id")
         .eq("spieler_id", spielerId)
         .eq("halbserie_id", halbserieId)
+        .eq("rolle", "stamm")
         .maybeSingle()
     : { data: null as any };
 
-  if (meld?.mannschaft_id) {
+  if (stamm?.mannschaft_id) {
     const { data: spiele } = await supabase
       .from("spiele")
       .select("id, datum, heim, gegner")
-      .eq("mannschaft_id", meld.mannschaft_id)
+      .eq("mannschaft_id", stamm.mannschaft_id)
       .eq("halbserie_id", halbserieId)
       .gte("datum", heute)
       .order("datum");
