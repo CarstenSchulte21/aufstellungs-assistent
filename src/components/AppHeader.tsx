@@ -81,7 +81,7 @@ export default function AppHeader({
 
         {/* Schnellzugriff */}
         <a href="/meine-spieltage" className={bar}>
-          Meine Spieltage
+          Spieltagsplanung
           {spielerCount > 0 && (
             <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
               {spielerCount}
@@ -101,8 +101,8 @@ export default function AppHeader({
             {isAdmin || isMf ? (
               <>
                 <div className={gruppe}>Mannschaft</div>
-                <a href="/mannschaft" className={item}>
-                  Meine Mannschaft
+                <a href="/meine-spieltage" className={item}>
+                  Spieltagsplanung
                 </a>
                 <a href="/kader" className={item}>
                   Kader
@@ -130,11 +130,8 @@ export default function AppHeader({
             ) : (
               <>
                 <div className={gruppe}>Spieler</div>
-                <a href="/mannschaft" className={item}>
-                  Meine Mannschaft
-                </a>
                 <a href="/meine-spieltage" className={item}>
-                  Meine Spieltage
+                  Spieltagsplanung
                 </a>
               </>
             )}

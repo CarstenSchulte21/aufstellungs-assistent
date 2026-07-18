@@ -4,13 +4,20 @@ import { getSession } from "@/lib/auth";
 import { loadLagebild } from "@/lib/lagebild";
 import { loadInbox } from "@/lib/inbox";
 import { loadSpielerAufgaben } from "@/lib/spielerinbox";
+import { loadTeams, loadMatrix, type TeamRow } from "@/lib/matrix";
+import { ladeStammTeamId } from "@/lib/kader";
 import AppHeader from "@/components/AppHeader";
 import UebersichtTeams from "./UebersichtTeams";
+import MatrixTabelle from "@/components/MatrixTabelle";
 import { InboxAufgaben, SpielerAufgabenListe } from "./UebersichtAufgaben";
 
 export const dynamic = "force-dynamic";
 
-export default async function Uebersicht() {
+export default async function Uebersicht({
+  searchParams,
+}: {
+  searchParams: { team?: string };
+}) {
   const session = await getSession();
   if (!session) redirect("/login");
 
@@ -29,7 +36,7 @@ export default async function Uebersicht() {
     if (sp && !sp.dsgvo_einwilligung_am) redirect("/einwilligung");
   }
 
-  // Onboarding-Gate: beim ersten Login den Willkommensscreen zeigen
+  // Onboarding-Gate
   const { data: prof } = await supabase
     .from("benutzer")
     .select("onboarding_gesehen")
@@ -37,9 +44,7 @@ export default async function Uebersicht() {
     .maybeSingle();
   if (prof && prof.onboarding_gesehen === false) redirect("/willkommen");
 
-  const { teams } = await loadLagebild(supabase);
-
-  // Aufgaben je nach aktivem Modus: Management → Inbox, sonst Spieler-To-dos
+  // Aufgaben je nach aktivem Modus
   const management = session.isAdmin || session.isMf;
   const inboxItems = management
     ? await loadInbox(supabase, {
@@ -58,6 +63,47 @@ export default async function Uebersicht() {
       : spielerItems.length
     : 0;
 
+  // Hauptinhalt: Admin → Spieltagsübersicht aller Mannschaften; MF/Spieler →
+  // Matrix der eigenen Mannschaft.
+  let hauptinhalt: React.ReactNode;
+  if (session.isAdmin) {
+    const { teams } = await loadLagebild(supabase);
+    hauptinhalt = <UebersichtTeams teams={teams} />;
+  } else {
+    const alle = await loadTeams(supabase);
+    let meine: TeamRow[] = alle.filter((t) => session.mfTeams.includes(t.id));
+    if (meine.length === 0 && session.spielerId) {
+      const stammTeam = await ladeStammTeamId(
+        supabase,
+        // aktive Halbserie über loadMatrix/loadTeams-Kontext: hole sie hier
+        (await aktiveHalbserie(supabase)) ?? "",
+        session.spielerId
+      );
+      if (stammTeam) meine = alle.filter((t) => t.id === stammTeam);
+    }
+    const selectedTeamId =
+      meine.find((t) => t.id === searchParams.team)?.id ?? meine[0]?.id ?? "";
+    const matrix = selectedTeamId
+      ? await loadMatrix(supabase, selectedTeamId)
+      : null;
+    hauptinhalt = selectedTeamId ? (
+      <MatrixTabelle
+        teams={meine}
+        matrix={matrix}
+        selectedTeamId={selectedTeamId}
+        isAdmin={session.isAdmin}
+        isMf={session.isMf}
+        basePath="/"
+      />
+    ) : (
+      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        Dir ist aktuell keine Stamm-Mannschaft zugeordnet. Sobald dich dein
+        Mannschaftsführer in den Kader aufgenommen hat, erscheint hier deine
+        Mannschaft.
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <AppHeader
@@ -71,7 +117,7 @@ export default async function Uebersicht() {
         spielerCount={spielerCount}
       />
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-5">
-        <UebersichtTeams teams={teams} />
+        {hauptinhalt}
         {management ? (
           <InboxAufgaben items={inboxItems} />
         ) : (
@@ -80,4 +126,15 @@ export default async function Uebersicht() {
       </main>
     </div>
   );
+}
+
+async function aktiveHalbserie(
+  supabase: ReturnType<typeof createClient>
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("halbserien")
+    .select("id")
+    .eq("aktiv", true)
+    .maybeSingle();
+  return data?.id ?? null;
 }

@@ -141,83 +141,8 @@ export default async function MeineSpieltagePage({
     meinePraef = ((selbst as any)?.praeferenzen as Record<string, unknown>) ?? {};
   }
 
-  // Ansprechpartner (MF + Stellvertreter) der eigenen Stamm-Mannschaft
-  let ansprech: {
-    teamName: string;
-    mf: { name: string; telefon: string | null } | null;
-    stellv: { name: string; telefon: string | null } | null;
-  } | null = null;
-  if (stamm?.mannschaft_id) {
-    const { data: team } = await supabase
-      .from("mannschaften")
-      .select("name, mannschaftsfuehrer_id, stellv_mf_id")
-      .eq("id", stamm.mannschaft_id)
-      .maybeSingle();
-    if (team) {
-      const ids = [
-        (team as any).mannschaftsfuehrer_id,
-        (team as any).stellv_mf_id,
-      ].filter(Boolean) as string[];
-      const { data: sp } = ids.length
-        ? await supabase.from("spieler").select("id, name, telefon").in("id", ids)
-        : { data: [] as any[] };
-      const von = new Map<string, { name: string; telefon: string | null }>(
-        (sp ?? []).map((p: any) => [p.id, { name: p.name, telefon: p.telefon ?? null }])
-      );
-      ansprech = {
-        teamName: (team as any).name ?? "",
-        mf: (team as any).mannschaftsfuehrer_id
-          ? von.get((team as any).mannschaftsfuehrer_id) ?? null
-          : null,
-        stellv: (team as any).stellv_mf_id
-          ? von.get((team as any).stellv_mf_id) ?? null
-          : null,
-      };
-    }
-  }
-
   return (
     <Shell>
-      {ansprech && (ansprech.mf || ansprech.stellv) && (
-        <div className="mb-4 rounded-xl border border-slate-200 bg-white p-3 text-[13px]">
-          <div className="mb-1 text-[12px] font-semibold text-slate-500">
-            Ansprechpartner · {ansprech.teamName}
-          </div>
-          {ansprech.mf && (
-            <div className="text-slate-700">
-              <span className="text-slate-400">MF:</span>{" "}
-              <span className="font-medium">{ansprech.mf.name}</span>
-              {ansprech.mf.telefon && (
-                <a
-                  href={`tel:${ansprech.mf.telefon}`}
-                  className="ml-1 text-primary hover:underline"
-                >
-                  {ansprech.mf.telefon}
-                </a>
-              )}
-            </div>
-          )}
-          {ansprech.stellv && (
-            <div className="text-slate-700">
-              <span className="text-slate-400">Stellv.:</span>{" "}
-              <span className="font-medium">{ansprech.stellv.name}</span>
-              {ansprech.stellv.telefon && (
-                <a
-                  href={`tel:${ansprech.stellv.telefon}`}
-                  className="ml-1 text-primary hover:underline"
-                >
-                  {ansprech.stellv.telefon}
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      {session.spielerId && (
-        <div className="mb-4">
-          <MeinePraeferenzen praeferenzen={meinePraef} />
-        </div>
-      )}
       <MeineSpieltageClient
         zielId={zielId}
         proxyOpts={proxyOpts}
@@ -225,6 +150,11 @@ export default async function MeineSpieltagePage({
         abwesenheiten={abwesenheiten}
         ersatzanfragen={ersatzanfragen}
       />
+      {session.spielerId && (
+        <div className="mt-6">
+          <MeinePraeferenzen praeferenzen={meinePraef} />
+        </div>
+      )}
     </Shell>
   );
 }
