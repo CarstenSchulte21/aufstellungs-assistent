@@ -1,11 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { heuteBerlin } from "@/lib/cron";
 
+export type Ansprechpartner = { name: string; telefon: string | null };
+
 export type TeamUebersicht = {
   teamId: string;
   nummer: number;
   name: string;
   benoetigt: number;
+  mf: Ansprechpartner | null;
+  stellv: Ansprechpartner | null;
   next: {
     spielId: string;
     datum: string;
@@ -50,8 +54,27 @@ export async function loadLagebild(supabase: SupabaseClient): Promise<{
 
   const { data: teams } = await supabase
     .from("mannschaften")
-    .select("id, nummer, name, spielstaerke")
+    .select("id, nummer, name, spielstaerke, mannschaftsfuehrer_id, stellv_mf_id")
     .order("nummer");
+
+  // Ansprechpartner (MF + Stellvertreter) je Team auflösen
+  const partnerIds = new Set<string>();
+  for (const t of teams ?? []) {
+    if ((t as any).mannschaftsfuehrer_id) partnerIds.add((t as any).mannschaftsfuehrer_id);
+    if ((t as any).stellv_mf_id) partnerIds.add((t as any).stellv_mf_id);
+  }
+  const partnerVon = new Map<string, Ansprechpartner>();
+  if (partnerIds.size > 0) {
+    const { data: ps } = await supabase
+      .from("spieler")
+      .select("id, name, telefon")
+      .in("id", Array.from(partnerIds));
+    for (const p of ps ?? [])
+      partnerVon.set((p as any).id, {
+        name: (p as any).name,
+        telefon: (p as any).telefon ?? null,
+      });
+  }
 
   const { data: spiele } = await supabase
     .from("spiele")
@@ -97,6 +120,8 @@ export async function loadLagebild(supabase: SupabaseClient): Promise<{
       nummer: t.nummer,
       name: t.name,
       benoetigt: t.spielstaerke,
+      mf: t.mannschaftsfuehrer_id ? partnerVon.get(t.mannschaftsfuehrer_id) ?? null : null,
+      stellv: t.stellv_mf_id ? partnerVon.get(t.stellv_mf_id) ?? null : null,
       next: naechstes
         ? {
             spielId: naechstes.id,

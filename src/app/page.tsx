@@ -122,6 +122,42 @@ export default async function Uebersicht() {
                         Kein anstehendes Spiel.
                       </div>
                     )}
+                    {(t.mf || t.stellv) && (
+                      <div className="mt-2 border-t border-slate-100 pt-2 text-[11px] text-slate-500">
+                        {t.mf && (
+                          <div>
+                            <span className="text-slate-400">MF:</span>{" "}
+                            <span className="font-medium text-slate-600">
+                              {t.mf.name}
+                            </span>
+                            {t.mf.telefon && (
+                              <a
+                                href={`tel:${t.mf.telefon}`}
+                                className="ml-1 text-primary hover:underline"
+                              >
+                                {t.mf.telefon}
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        {t.stellv && (
+                          <div>
+                            <span className="text-slate-400">Stellv.:</span>{" "}
+                            <span className="font-medium text-slate-600">
+                              {t.stellv.name}
+                            </span>
+                            {t.stellv.telefon && (
+                              <a
+                                href={`tel:${t.stellv.telefon}`}
+                                className="ml-1 text-primary hover:underline"
+                              >
+                                {t.stellv.telefon}
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
