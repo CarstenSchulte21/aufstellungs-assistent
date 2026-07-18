@@ -10,7 +10,7 @@ type Props = {
   realIsAdmin?: boolean;
   realIsMf?: boolean;
   hatManagement?: boolean;
-  spielerModus?: boolean;
+  modus?: "admin" | "mf" | "spieler";
   inboxCount?: number;
 };
 
@@ -19,8 +19,9 @@ export default function AppHeader({
   isAdmin = false,
   isMf = false,
   realIsAdmin = false,
+  realIsMf = false,
   hatManagement = false,
-  spielerModus = false,
+  modus = "spieler",
   inboxCount = 0,
 }: Props) {
   const router = useRouter();
@@ -31,13 +32,16 @@ export default function AppHeader({
   const gruppe =
     "mt-1 px-3 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400";
 
-  const mgmtLabel = realIsAdmin ? "Admin" : "Mannschaftsführer";
-  const modusLabel = spielerModus ? "Spieler" : mgmtLabel;
+  const spielerModus = modus === "spieler";
+  const modusLabel =
+    modus === "admin"
+      ? "Admin"
+      : modus === "mf"
+      ? "Mannschaftsführer"
+      : "Spieler";
 
   function setModus(v: string) {
-    if (v === "spieler")
-      document.cookie = "view_as=spieler; path=/; max-age=2592000";
-    else document.cookie = "view_as=; path=/; max-age=0";
+    document.cookie = `modus=${v}; path=/; max-age=2592000`;
     router.refresh();
   }
 
@@ -62,11 +66,12 @@ export default function AppHeader({
           <label className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-[11px] text-blue-50">
             Modus:
             <select
-              value={spielerModus ? "spieler" : "mgmt"}
+              value={modus}
               onChange={(e) => setModus(e.target.value)}
               className="rounded bg-primary-dark px-1 py-0.5 text-[12px] text-white outline-none"
             >
-              <option value="mgmt">{mgmtLabel}</option>
+              {realIsAdmin && <option value="admin">Admin</option>}
+              {realIsMf && <option value="mf">Mannschaftsführer</option>}
               <option value="spieler">Spieler</option>
             </select>
           </label>

@@ -45,7 +45,7 @@ export default async function InboxPage() {
         realIsAdmin={session.realIsAdmin}
         realIsMf={session.realIsMf}
         hatManagement={session.hatManagement}
-        spielerModus={session.spielerModus}
+        modus={session.modus}
         inboxCount={items.length}
       />
       <main className="mx-auto max-w-3xl px-4 py-5">

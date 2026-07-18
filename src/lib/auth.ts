@@ -11,7 +11,7 @@ export type SessionInfo = {
   realIsAdmin: boolean;
   realIsMf: boolean;
   hatManagement: boolean; // MF und/oder Admin -> Modus-Umschalter verfügbar
-  spielerModus: boolean; // aktuell in der Spieler-Sicht?
+  modus: "admin" | "mf" | "spieler"; // aktiver Modus
 };
 
 /** Liest die aktuelle Session + Rollen (oder null, wenn nicht eingeloggt). */
@@ -43,17 +43,22 @@ export async function getSession(): Promise<SessionInfo | null> {
   const realIsMf = mfTeams.length > 0;
   const hatManagement = realIsAdmin || realIsMf;
 
-  // Modus: wer eine Management-Rolle hat, kann in die Spieler-Sicht wechseln.
-  const spielerModus = hatManagement && cookies().get("view_as")?.value === "spieler";
+  // Modus (Admin/MF/Spieler) — nur zulässige Modi je nach echter Rolle.
+  const wunsch = cookies().get("modus")?.value;
+  const erlaubt = (m?: string) =>
+    m === "spieler" || (m === "mf" && realIsMf) || (m === "admin" && realIsAdmin);
+  const modus: "admin" | "mf" | "spieler" =
+    wunsch && erlaubt(wunsch)
+      ? (wunsch as "admin" | "mf" | "spieler")
+      : realIsAdmin
+      ? "admin"
+      : realIsMf
+      ? "mf"
+      : "spieler";
 
-  let isAdmin = realIsAdmin;
-  let isMf = realIsMf;
-  let effMfTeams = mfTeams;
-  if (spielerModus) {
-    isAdmin = false;
-    isMf = false;
-    effMfTeams = [];
-  }
+  const isAdmin = modus === "admin";
+  const isMf = modus === "mf" || (modus === "admin" && realIsMf);
+  const effMfTeams = modus === "spieler" ? [] : mfTeams;
 
   return {
     userId: user.id,
@@ -65,6 +70,6 @@ export async function getSession(): Promise<SessionInfo | null> {
     realIsAdmin,
     realIsMf,
     hatManagement,
-    spielerModus,
+    modus,
   };
 }

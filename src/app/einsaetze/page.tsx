@@ -87,7 +87,7 @@ export default async function EinsaetzePage() {
         realIsAdmin={session.realIsAdmin}
         realIsMf={session.realIsMf}
         hatManagement={session.hatManagement}
-        spielerModus={session.spielerModus}
+        modus={session.modus}
       />
       <main className="mx-auto max-w-3xl px-4 py-5">
         <h1 className="mb-1 text-[15px] font-bold text-slate-800">

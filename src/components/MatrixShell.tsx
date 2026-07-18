@@ -42,7 +42,7 @@ export default function MatrixShell({
   realIsAdmin = false,
   realIsMf = false,
   hatManagement = false,
-  spielerModus = false,
+  modus = "spieler",
   basePath = "/",
 }: {
   teams: TeamRow[];
@@ -54,7 +54,7 @@ export default function MatrixShell({
   realIsAdmin?: boolean;
   realIsMf?: boolean;
   hatManagement?: boolean;
-  spielerModus?: boolean;
+  modus?: "admin" | "mf" | "spieler";
   basePath?: string;
 }) {
   const router = useRouter();
@@ -115,7 +115,7 @@ export default function MatrixShell({
         realIsAdmin={realIsAdmin}
         realIsMf={realIsMf}
         hatManagement={hatManagement}
-        spielerModus={spielerModus}
+        modus={modus}
       />
 
       {/* Mannschaftswahl */}

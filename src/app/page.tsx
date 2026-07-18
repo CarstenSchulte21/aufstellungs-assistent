@@ -57,7 +57,7 @@ export default async function Uebersicht() {
         realIsAdmin={session.realIsAdmin}
         realIsMf={session.realIsMf}
         hatManagement={session.hatManagement}
-        spielerModus={session.spielerModus}
+        modus={session.modus}
         inboxCount={inboxCount}
       />
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-5">
