@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAdmin } from "@/lib/supabase/admin";
+import { getBot, ensureInit } from "@/lib/telegram/bot";
+import { aktualisiereErsatzNachricht } from "@/lib/telegram/abfrage";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +60,20 @@ export async function POST(req: Request): Promise<Response> {
     },
     { onConflict: "spiel_id,spieler_id" }
   );
+
+  // Ursprüngliche Telegram-Anfrage nachziehen (best effort).
+  try {
+    const bot = getBot();
+    await ensureInit(bot);
+    await aktualisiereErsatzNachricht(admin, bot, {
+      ersatzanfrageId: ersatzanfrage_id,
+      spielerId: (anfrage as any).spieler_id,
+      spielId: (anfrage as any).spiel_id,
+      antwort,
+    });
+  } catch {
+    // Telegram-Update optional
+  }
 
   return NextResponse.json({ ok: true });
 }

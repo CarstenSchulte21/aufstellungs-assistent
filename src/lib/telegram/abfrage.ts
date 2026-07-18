@@ -154,6 +154,56 @@ export async function ladeSpiel(
   };
 }
 
+// Bearbeitet die ursprüngliche Telegram-Ersatzanfrage, sodass sie den in der
+// Webapp gesetzten Antwortstatus widerspiegelt (Nachricht + Buttons bleiben,
+// aber die Antwortzeile wird ergänzt). Fehler werden geschluckt.
+export async function aktualisiereErsatzNachricht(
+  admin: SupabaseClient,
+  bot: Bot,
+  opts: {
+    ersatzanfrageId: string;
+    spielerId: string;
+    spielId: string;
+    antwort: "ja" | "nein";
+  }
+): Promise<void> {
+  try {
+    const { data: nachricht } = await admin
+      .from("nachrichten")
+      .select("telegram_message_id")
+      .eq("ersatzanfrage_id", opts.ersatzanfrageId)
+      .eq("richtung", "ausgehend")
+      .not("telegram_message_id", "is", null)
+      .limit(1)
+      .maybeSingle();
+    const messageId = (nachricht as any)?.telegram_message_id;
+    if (!messageId) return;
+
+    const { data: sp } = await admin
+      .from("spieler")
+      .select("telegram_chat_id")
+      .eq("id", opts.spielerId)
+      .maybeSingle();
+    const chatId = (sp as any)?.telegram_chat_id;
+    if (!chatId) return;
+
+    const info = await ladeSpiel(admin, opts.spielId);
+    const kopf = info ? ersatzText(info) : "Ersatzanfrage";
+    const antwortZeile =
+      opts.antwort === "ja"
+        ? "➡️ *Deine Antwort (per Webapp): Ich helfe aus ✅*\n_Der Mannschaftsführer plant dich final ein. Doch anders? Einfach neu tippen._"
+        : "➡️ *Deine Antwort (per Webapp): Diesmal nicht ❌*\n_Doch anders? Einfach neu tippen._";
+    await bot.api.editMessageText(
+      Number(chatId),
+      Number(messageId),
+      `${kopf}\n\n${antwortZeile}`,
+      { parse_mode: "Markdown", reply_markup: ersatzKeyboard(opts.ersatzanfrageId) }
+    );
+  } catch {
+    // Telegram-Aktualisierung ist optional — Fehler nicht weiterreichen.
+  }
+}
+
 // Gekoppelte, aktive Spieler einer Mannschaft (mit Telegram-Chat).
 export async function gekoppelteSpieler(
   admin: SupabaseClient,
