@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { TeamUebersicht } from "@/lib/lagebild";
 
 function fmt(iso: string) {
@@ -22,6 +22,24 @@ export default function UebersichtTeams({
   const label =
     offset === 0 ? "Nächster Spieltag" : `${offset + 1}. Spieltag ab heute`;
 
+  const go = (dir: 1 | -1) =>
+    setOffset((o) => Math.min(maxOffset, Math.max(0, o + dir)));
+
+  // Wischgesten (Touch): nach links = weiter, nach rechts = zurück
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.changedTouches[0];
+    touch.current = { x: t.clientX, y: t.clientY };
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (!touch.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touch.current.x;
+    const dy = t.clientY - touch.current.y;
+    touch.current = null;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+  }
+
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -31,7 +49,7 @@ export default function UebersichtTeams({
         {maxLen > 1 && (
           <div className="ml-auto flex items-center gap-1">
             <button
-              onClick={() => setOffset((o) => Math.max(0, o - 1))}
+              onClick={() => go(-1)}
               disabled={offset === 0}
               aria-label="Vorheriger Spieltag"
               className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-sm font-semibold text-slate-600 hover:border-slate-400 disabled:opacity-40"
@@ -42,7 +60,7 @@ export default function UebersichtTeams({
               {label}
             </span>
             <button
-              onClick={() => setOffset((o) => Math.min(maxOffset, o + 1))}
+              onClick={() => go(1)}
               disabled={offset >= maxOffset}
               aria-label="Nächster Spieltag"
               className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-sm font-semibold text-slate-600 hover:border-slate-400 disabled:opacity-40"
@@ -58,7 +76,11 @@ export default function UebersichtTeams({
           Noch keine Mannschaften angelegt.
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
           {teams.map((t) => {
             const n = t.naechste[offset] ?? null;
             const fehlt = n ? Math.max(0, t.benoetigt - n.zu) : 0;
