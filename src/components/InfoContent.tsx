@@ -61,7 +61,7 @@ export default function InfoContent({ rolle }: { rolle: Rolle }) {
           <p>
             <strong>Ersatzvorschläge:</strong> Bei Lücken zeigt dir das
             Spieltag-Detail regelkonforme Kandidaten (nur von unten, kein
-            Sperrvermerk, nicht am selben Tag verplant). „Anfrage freigeben“
+            Sperrvermerk, nicht am selben Tag verplant). „Anfrage stellen“
             schickt sie per Telegram; zugesagte Ersatzspieler planst du fest ein.
           </p>
           <p>

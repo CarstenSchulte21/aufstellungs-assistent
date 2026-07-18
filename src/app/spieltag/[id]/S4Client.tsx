@@ -360,7 +360,7 @@ export default function S4Client({
                               : "bg-primary text-white hover:bg-primary-dark"
                           }`}
                         >
-                          {busy === "frei:" + c.id ? "…" : "Anfrage freigeben"}
+                          {busy === "frei:" + c.id ? "…" : "Anfrage stellen"}
                         </button>
                       )}
                     </div>
