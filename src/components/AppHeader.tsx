@@ -79,15 +79,17 @@ export default function AppHeader({
           </label>
         )}
 
-        {/* Schnellzugriff */}
-        <a href="/meine-spieltage" className={bar}>
-          Spieltagsplanung
-          {spielerCount > 0 && (
-            <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
-              {spielerCount}
-            </span>
-          )}
-        </a>
+        {/* Schnellzugriff — Spieltagsplanung ist eine Spieler-Ansicht */}
+        {(spielerModus || !hatManagement) && (
+          <a href="/meine-spieltage" className={bar}>
+            Spieltagsplanung
+            {spielerCount > 0 && (
+              <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
+                {spielerCount}
+              </span>
+            )}
+          </a>
+        )}
 
         <button onClick={() => setOpen((o) => !o)} className={bar}>
           Menü ▾
@@ -101,9 +103,6 @@ export default function AppHeader({
             {isAdmin || isMf ? (
               <>
                 <div className={gruppe}>Mannschaft</div>
-                <a href="/meine-spieltage" className={item}>
-                  Spieltagsplanung
-                </a>
                 <a href="/kader" className={item}>
                   Kader
                 </a>
