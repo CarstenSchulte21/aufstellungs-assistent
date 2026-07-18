@@ -54,6 +54,20 @@ export default async function AdminPage() {
               Mannschaftsführer und Stellvertreter je Mannschaft festlegen.
             </p>
           </a>
+          {session.isOwner && (
+            <a
+              href="/admin/admins"
+              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary"
+            >
+              <div className="text-base font-bold text-slate-900">
+                🔑 Administratoren
+              </div>
+              <p className="mt-1 text-sm text-slate-500">
+                Anderen Nutzern das Admin-Recht geben oder entziehen (nur
+                Besitzer).
+              </p>
+            </a>
+          )}
         </div>
         <p className="mt-6 text-[12px] text-slate-400">
           Diese Bereiche sind nur für Admins sichtbar.

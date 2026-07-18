@@ -10,6 +10,7 @@ export type SessionInfo = {
   isMf: boolean; // effektiv
   realIsAdmin: boolean;
   realIsMf: boolean;
+  isOwner: boolean; // Besitzer: darf Admin-Rechte vergeben
   hatManagement: boolean; // MF und/oder Admin -> Modus-Umschalter verfügbar
   modus: "admin" | "mf" | "spieler"; // aktiver Modus
 };
@@ -23,11 +24,12 @@ export async function getSession(): Promise<SessionInfo | null> {
   if (!user) return null;
   const { data: profil } = await supabase
     .from("benutzer")
-    .select("spieler_id, rollen")
+    .select("spieler_id, rollen, ist_owner")
     .eq("id", user.id)
     .maybeSingle();
   const rollen: string[] = (profil?.rollen as string[] | null) ?? [];
   const spielerId = (profil?.spieler_id as string | null) ?? null;
+  const isOwner = (profil?.ist_owner as boolean | null) ?? false;
 
   // MF-Zugehörigkeit wird aus der Mannschaft abgeleitet (Führer/Stellvertreter)
   let mfTeams: string[] = [];
@@ -79,6 +81,7 @@ export async function getSession(): Promise<SessionInfo | null> {
     isMf,
     realIsAdmin,
     realIsMf,
+    isOwner,
     hatManagement,
     modus,
   };
