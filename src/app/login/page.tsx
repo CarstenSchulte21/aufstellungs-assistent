@@ -4,27 +4,55 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const [modus, setModus] = useState<"anmelden" | "registrieren">("anmelden");
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
-    "idle"
-  );
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState("");
 
-  async function login(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("sending");
+    setBusy(true);
     setFehler("");
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
+
+    if (modus === "registrieren") {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pw,
+      });
+      if (error) {
+        setBusy(false);
+        setFehler(
+          /already registered|exists/i.test(error.message)
+            ? "Für diese E-Mail gibt es schon ein Konto. Bitte melde dich an."
+            : /at least/i.test(error.message)
+            ? "Das Passwort muss mindestens 6 Zeichen haben."
+            : "Registrierung fehlgeschlagen: " + error.message
+        );
+        return;
+      }
+      if (!data.session) {
+        setBusy(false);
+        setFehler(
+          "Konto angelegt, aber es fehlt noch die Freigabe. Bitte melde dich beim Admin."
+        );
+        return;
+      }
+      window.location.assign("/");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/finish` },
+      password: pw,
     });
     if (error) {
-      setStatus("error");
-      setFehler(error.message);
-    } else {
-      setStatus("sent");
+      setBusy(false);
+      setFehler("E-Mail oder Passwort ist falsch.");
+      return;
     }
+    window.location.assign("/");
   }
 
   return (
@@ -38,50 +66,90 @@ export default function LoginPage() {
             <h1 className="text-base font-bold leading-tight text-slate-900">
               Aufstellungs-Assistent
             </h1>
-            <p className="text-[12px] text-slate-500">Anmeldung per E-Mail-Link</p>
+            <p className="text-[12px] text-slate-500">
+              {modus === "anmelden" ? "Anmeldung" : "Konto anlegen"}
+            </p>
           </div>
         </div>
 
-        {status === "sent" ? (
-          <div className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">
-            <p className="font-semibold">E-Mail ist unterwegs.</p>
-            <p className="mt-1">
-              Wir haben dir einen Anmelde-Link an <strong>{email}</strong>{" "}
-              geschickt. Öffne ihn einfach — er funktioniert auf jedem Gerät und
-              in jedem Browser.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={login} className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700">
-              E-Mail-Adresse
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="du@verein.de"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={status === "sending"}
-              className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:opacity-60"
-            >
-              {status === "sending" ? "Link wird gesendet…" : "Anmelde-Link senden"}
-            </button>
-            {status === "error" && (
-              <p className="text-sm text-rose-600">
-                Fehler: {fehler || "Bitte später erneut versuchen."}
-              </p>
-            )}
-            <p className="pt-1 text-[12px] text-slate-400">
-              Noch nicht angelegt? Dein Mannschaftsführer muss dich zuerst
-              hinzufügen.
-            </p>
-          </form>
-        )}
+        <div className="mb-4 flex rounded-lg bg-slate-100 p-1 text-sm font-medium">
+          <button
+            type="button"
+            onClick={() => {
+              setModus("anmelden");
+              setFehler("");
+            }}
+            className={`flex-1 rounded-md px-3 py-1.5 transition ${
+              modus === "anmelden"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500"
+            }`}
+          >
+            Anmelden
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setModus("registrieren");
+              setFehler("");
+            }}
+            className={`flex-1 rounded-md px-3 py-1.5 transition ${
+              modus === "registrieren"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500"
+            }`}
+          >
+            Erstes Mal
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          <label className="block text-sm font-medium text-slate-700">
+            E-Mail-Adresse
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="du@verein.de"
+              autoComplete="email"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Passwort
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              placeholder={modus === "registrieren" ? "mind. 6 Zeichen" : "••••••••"}
+              autoComplete={
+                modus === "registrieren" ? "new-password" : "current-password"
+              }
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:opacity-60"
+          >
+            {busy
+              ? "Bitte warten…"
+              : modus === "registrieren"
+              ? "Konto anlegen & anmelden"
+              : "Anmelden"}
+          </button>
+          {fehler && <p className="text-sm text-rose-600">{fehler}</p>}
+        </form>
+
+        <p className="pt-3 text-[12px] text-slate-400">
+          {modus === "registrieren"
+            ? "Nutze die E-Mail-Adresse, die dein Mannschaftsführer hinterlegt hat — nur dann wirst du deinem Spielerprofil zugeordnet."
+            : "Zum ersten Mal hier? Wechsle oben auf den Reiter für neue Konten und lege dir ein Passwort an."}
+        </p>
       </div>
     </main>
   );
