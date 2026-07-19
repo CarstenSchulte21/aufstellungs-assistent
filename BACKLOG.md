@@ -100,6 +100,36 @@ Halbserien-Wechsel (Auf-/Abstieg).
    angezeigt; im Zweifel einigen sich die MF. → *Wert: hoch (Korrektheit der
    Engine), Aufwand: klein–mittel.* Ändert `belegtAmTag`-Logik + Annotationen.
 
+## Weitere Kanäle: WhatsApp / E-Mail (recherchiert, zurückgestellt)
+
+WhatsApp ist im Verein verbreiteter als Telegram und würde die Einführung
+erleichtern. Einschätzung nach Recherche:
+
+- **Unser Code-Anteil ist überschaubar** (~2–4 Sessions): Kanal-Abstraktion je
+  Spieler (Feld `spieler.kanal` existiert bereits) + zweiter Sende-/Empfangs-
+  Adapter neben Telegram. Buttons (Ja/Nein/Unsicher) und Freitext-Erkennung
+  gehen bei WhatsApp ebenfalls.
+- **Der eigentliche Aufwand liegt bei WhatsApp/Meta**, nicht im Code:
+  - Offizieller Weg = WhatsApp Business Cloud API über einen Anbieter (Twilio,
+    360dialog). Braucht eigene Business-Nummer (nicht die private) + Meta-
+    Business-Verifizierung (Bürokratie, Tage).
+  - **Genehmigungspflichtige Nachrichten-Templates** für jede proaktive Nachricht
+    (Abfrage, Reminder, Ersatzanfrage, Einplanungs-Bestätigung) — je ein Meta-
+    Freigabeprozess, feste Platzhalter, starrer als heute.
+  - **24-Stunden-Regel:** frei formulierte Nachrichten nur, wenn der Nutzer
+    zuletzt geschrieben hat; proaktiv also fast alles über Templates.
+  - **Laufende Kosten** pro Konversation/Nachricht (Meta + Anbieter), Zahlungs-
+    mittel/Vertrag nötig.
+- **Nicht machen:** inoffizielle Libraries (Baileys, whatsapp-web.js) — Verstoß
+  gegen WhatsApp-ToS, Sperr-Risiko der Nummer.
+- **Günstigere Adoptionshilfe zuerst:** E-Mail-Kanal für Nicht-Telegram-Nutzer
+  (Abfragen/Reminder per Mail mit Link zur Web-App; Zusagen in der App). Ohne
+  Meta-Bürokratie, ohne Templates, ohne laufende Kosten; E-Mail-Login existiert
+  schon. → Empfohlener erster Schritt, falls das Ziel „einfache Einführung" ist.
+- Offene Entscheidung: (a) E-Mail-Kanal als schnelle Alternative bauen, oder
+  (b) WhatsApp seriös planen (Anbieterwahl, Twilio-Sandbox-PoC, Templates,
+  Kostenrechnung), bevor implementiert wird.
+
 ## Bereits in MEILENSTEINE.md geplant (Phase 2/3)
 
 - M5 Regel-Engine & Ersatzvorschläge, M6 Lagebild & Inbox.

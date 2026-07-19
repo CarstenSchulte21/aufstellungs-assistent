@@ -30,16 +30,14 @@ export default function MatrixTabelle({
   teams,
   matrix,
   selectedTeamId,
-  isAdmin = false,
-  isMf = false,
   basePath = "/",
+  zeigeAuswahl = true,
 }: {
   teams: TeamRow[];
   matrix: MatrixData | null;
   selectedTeamId: string;
-  isAdmin?: boolean;
-  isMf?: boolean;
   basePath?: string;
+  zeigeAuswahl?: boolean;
 }) {
   const router = useRouter();
   const [nurLuecken, setNurLuecken] = useState(false);
@@ -92,7 +90,7 @@ export default function MatrixTabelle({
 
   return (
     <div>
-      {teams.length > 1 && (
+      {zeigeAuswahl && teams.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {teams.map((t) => (
             <button
@@ -158,7 +156,9 @@ export default function MatrixTabelle({
                   {sichtbareDays.map((d) => {
                     const st = dayStats(d);
                     const ok = st.zu >= st.need;
-                    const kannDetail = isAdmin || isMf;
+                    // Spieltag-Detail ist für alle ansehbar; Bearbeiten regelt
+                    // die Detailseite (nur Admin/MF der Mannschaft).
+                    const kannDetail = true;
                     const inhalt = (
                       <>
                         <div className="text-[11px] font-bold text-slate-700">

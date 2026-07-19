@@ -45,8 +45,6 @@ export default function MatrixShell({
           teams={teams}
           matrix={matrix}
           selectedTeamId={selectedTeamId}
-          isAdmin={isAdmin}
-          isMf={isMf}
           basePath={basePath}
         />
       </main>

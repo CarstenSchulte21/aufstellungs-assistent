@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth";
-import { loadLagebild } from "@/lib/lagebild";
 import { loadInbox } from "@/lib/inbox";
 import { loadSpielerAufgaben } from "@/lib/spielerinbox";
-import { loadTeams, loadMatrix, type TeamRow } from "@/lib/matrix";
+import { loadTeams, loadMatrix } from "@/lib/matrix";
 import { ladeStammTeamId } from "@/lib/kader";
 import AppHeader from "@/components/AppHeader";
-import UebersichtTeams from "./UebersichtTeams";
 import MatrixTabelle from "@/components/MatrixTabelle";
+import TeamSlider from "./TeamSlider";
 import { InboxAufgaben, SpielerAufgabenListe } from "./UebersichtAufgaben";
 
 export const dynamic = "force-dynamic";
@@ -63,46 +62,28 @@ export default async function Uebersicht({
       : spielerItems.length
     : 0;
 
-  // Hauptinhalt: Admin → Spieltagsübersicht aller Mannschaften; MF/Spieler →
-  // Matrix der eigenen Mannschaft.
-  let hauptinhalt: React.ReactNode;
-  if (session.isAdmin) {
-    const { teams } = await loadLagebild(supabase);
-    hauptinhalt = <UebersichtTeams teams={teams} />;
-  } else {
-    const alle = await loadTeams(supabase);
-    let meine: TeamRow[] = alle.filter((t) => session.mfTeams.includes(t.id));
-    if (meine.length === 0 && session.spielerId) {
-      const stammTeam = await ladeStammTeamId(
-        supabase,
-        // aktive Halbserie über loadMatrix/loadTeams-Kontext: hole sie hier
-        (await aktiveHalbserie(supabase)) ?? "",
-        session.spielerId
-      );
-      if (stammTeam) meine = alle.filter((t) => t.id === stammTeam);
+  // Team-Slider über ALLE Mannschaften, Start bei der eigenen.
+  const alle = await loadTeams(supabase); // aufsteigend nach Nummer
+  const hsId = (await aktiveHalbserie(supabase)) ?? "";
+  let ownTeamId: string | null = null;
+  if (session.spielerId) {
+    ownTeamId = await ladeStammTeamId(supabase, hsId, session.spielerId);
+    if (!ownTeamId) {
+      const { data: mfrows } = await supabase
+        .from("mannschaften")
+        .select("id, nummer")
+        .or(
+          `mannschaftsfuehrer_id.eq.${session.spielerId},stellv_mf_id.eq.${session.spielerId}`
+        )
+        .order("nummer");
+      ownTeamId = (mfrows?.[0] as any)?.id ?? null;
     }
-    const selectedTeamId =
-      meine.find((t) => t.id === searchParams.team)?.id ?? meine[0]?.id ?? "";
-    const matrix = selectedTeamId
-      ? await loadMatrix(supabase, selectedTeamId)
-      : null;
-    hauptinhalt = selectedTeamId ? (
-      <MatrixTabelle
-        teams={meine}
-        matrix={matrix}
-        selectedTeamId={selectedTeamId}
-        isAdmin={session.isAdmin}
-        isMf={session.isMf}
-        basePath="/"
-      />
-    ) : (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        Dir ist aktuell keine Stamm-Mannschaft zugeordnet. Sobald dich dein
-        Mannschaftsführer in den Kader aufgenommen hat, erscheint hier deine
-        Mannschaft.
-      </div>
-    );
   }
+  if (!ownTeamId) ownTeamId = alle[0]?.id ?? null;
+
+  const selectedTeamId =
+    alle.find((t) => t.id === searchParams.team)?.id ?? ownTeamId ?? "";
+  const matrix = selectedTeamId ? await loadMatrix(supabase, selectedTeamId) : null;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -117,7 +98,26 @@ export default async function Uebersicht({
         spielerCount={spielerCount}
       />
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-5">
-        {hauptinhalt}
+        {selectedTeamId ? (
+          <section>
+            <TeamSlider
+              teams={alle}
+              selectedTeamId={selectedTeamId}
+              ownTeamId={ownTeamId}
+            />
+            <MatrixTabelle
+              teams={alle}
+              matrix={matrix}
+              selectedTeamId={selectedTeamId}
+              basePath="/"
+              zeigeAuswahl={false}
+            />
+          </section>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
+            Noch keine Mannschaften angelegt.
+          </div>
+        )}
         {management ? (
           <InboxAufgaben items={inboxItems} />
         ) : (
