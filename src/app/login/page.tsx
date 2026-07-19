@@ -17,7 +17,7 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/finish` },
     });
     if (error) {
       setStatus("error");
@@ -47,7 +47,8 @@ export default function LoginPage() {
             <p className="font-semibold">E-Mail ist unterwegs.</p>
             <p className="mt-1">
               Wir haben dir einen Anmelde-Link an <strong>{email}</strong>{" "}
-              geschickt. Öffne ihn auf diesem Gerät, dann bist du drin.
+              geschickt. Öffne ihn einfach — er funktioniert auf jedem Gerät und
+              in jedem Browser.
             </p>
           </div>
         ) : (
