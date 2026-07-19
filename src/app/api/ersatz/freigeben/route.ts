@@ -21,7 +21,7 @@ export async function POST(req: Request): Promise<Response> {
   const { data: spiel } = await admin
     .from("spiele")
     .select(
-      "id, spieltag_nr, datum, heim, gegner, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name)"
+      "id, spieltag_nr, datum, uhrzeit, heim, gegner, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name)"
     )
     .eq("id", spiel_id)
     .maybeSingle();
@@ -87,6 +87,7 @@ export async function POST(req: Request): Promise<Response> {
   const info = {
     spieltag_nr: (spiel as any).spieltag_nr,
     datum: (spiel as any).datum,
+    uhrzeit: (spiel as any).uhrzeit ?? null,
     heim: (spiel as any).heim,
     gegner: (spiel as any).gegner,
     teamName: (spiel as any).mannschaften?.name ?? "Mannschaft",

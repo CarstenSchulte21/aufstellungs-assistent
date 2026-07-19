@@ -39,6 +39,7 @@ export function ersatzKeyboard(anfrageId: string): InlineKeyboard {
 export function ersatzText(spiel: {
   spieltag_nr: number;
   datum: string;
+  uhrzeit?: string | null;
   heim: boolean;
   gegner: string;
   teamName: string;
@@ -46,7 +47,7 @@ export function ersatzText(spiel: {
   const ha = spiel.heim ? "Heim" : "Auswärts";
   return (
     `🆘 *Ersatz gesucht* — die ${spiel.teamName} braucht dich!\n` +
-    `Spieltag ${spiel.spieltag_nr}, ${fmtDatum(spiel.datum)} · ${ha} gegen ${spiel.gegner}\n\n` +
+    `Spieltag ${spiel.spieltag_nr}, ${fmtDatum(spiel.datum)}${zeitSuffix(spiel.uhrzeit)} · ${ha} gegen ${spiel.gegner}\n\n` +
     `Kannst du aushelfen?`
   );
 }
@@ -59,9 +60,14 @@ function fmtDatum(iso: string): string {
   });
 }
 
+function zeitSuffix(uhrzeit?: string | null): string {
+  return uhrzeit ? ` · ${uhrzeit.slice(0, 5)} Uhr` : "";
+}
+
 export function abfrageText(spiel: {
   spieltag_nr: number;
   datum: string;
+  uhrzeit?: string | null;
   heim: boolean;
   gegner: string;
   teamName: string;
@@ -69,7 +75,7 @@ export function abfrageText(spiel: {
   const ha = spiel.heim ? "Heim" : "Auswärts";
   return (
     `🏓 *Spieltag ${spiel.spieltag_nr}* der ${spiel.teamName}\n` +
-    `${fmtDatum(spiel.datum)} · ${ha} gegen ${spiel.gegner}\n\n` +
+    `${fmtDatum(spiel.datum)}${zeitSuffix(spiel.uhrzeit)} · ${ha} gegen ${spiel.gegner}\n\n` +
     `Bist du dabei?`
   );
 }
@@ -123,6 +129,7 @@ export type SpielInfo = {
   id: string;
   spieltag_nr: number;
   datum: string;
+  uhrzeit: string | null;
   heim: boolean;
   gegner: string;
   mannschaft_id: string;
@@ -137,7 +144,7 @@ export async function ladeSpiel(
   const { data } = await admin
     .from("spiele")
     .select(
-      "id, spieltag_nr, datum, heim, gegner, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name)"
+      "id, spieltag_nr, datum, uhrzeit, heim, gegner, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name)"
     )
     .eq("id", spielId)
     .maybeSingle();
@@ -146,6 +153,7 @@ export async function ladeSpiel(
     id: data.id,
     spieltag_nr: data.spieltag_nr,
     datum: data.datum,
+    uhrzeit: (data as any).uhrzeit ?? null,
     heim: data.heim,
     gegner: data.gegner,
     mannschaft_id: data.mannschaft_id,

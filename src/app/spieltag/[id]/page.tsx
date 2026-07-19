@@ -202,6 +202,7 @@ export default async function SpieltagPage({
         id: (spiel as any).id,
         spieltag_nr: (spiel as any).spieltag_nr,
         datum: (spiel as any).datum,
+        uhrzeit: (spiel as any).uhrzeit ?? null,
         heim: (spiel as any).heim,
         gegner: (spiel as any).gegner,
         teamName,

@@ -29,6 +29,7 @@ type Spiel = {
   id: string;
   spieltag_nr: number;
   datum: string;
+  uhrzeit?: string | null;
   heim: boolean;
   gegner: string;
   teamName: string;
@@ -152,8 +153,9 @@ export default function S4Client({
                 gegen {spiel.gegner}
               </h2>
               <p className="text-sm text-slate-500">
-                {fmt(spiel.datum)} · {spiel.teamName} · benötigt {spiel.need}{" "}
-                Spieler
+                {fmt(spiel.datum)}
+                {spiel.uhrzeit ? ` · ${spiel.uhrzeit.slice(0, 5)} Uhr` : ""} ·{" "}
+                {spiel.teamName} · benötigt {spiel.need} Spieler
               </p>
             </div>
             <div

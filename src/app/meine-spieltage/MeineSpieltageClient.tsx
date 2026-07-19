@@ -9,6 +9,7 @@ export type SpieltagRow = {
   id: string;
   spieltag_nr: number;
   datum: string;
+  uhrzeit: string | null;
   heim: boolean;
   gegner: string;
   status: string;
@@ -20,6 +21,7 @@ export type ErsatzRow = {
   status: string;
   frist_bis: string | null;
   datum: string;
+  uhrzeit: string | null;
   spieltag_nr: number;
   heim: boolean;
   gegner: string;
@@ -261,8 +263,9 @@ export default function MeineSpieltageClient({
               >
                 <div className="mr-auto">
                   <div className="text-sm font-medium text-slate-900">
-                    {fmt(s.datum)} · {s.heim ? "Heim" : "Auswärts"} gegen{" "}
-                    {s.gegner}
+                    {fmt(s.datum)}
+                    {s.uhrzeit ? ` · ${s.uhrzeit.slice(0, 5)} Uhr` : ""} ·{" "}
+                    {s.heim ? "Heim" : "Auswärts"} gegen {s.gegner}
                   </div>
                   <div className="text-[12px] text-slate-500">
                     Spieltag {s.spieltag_nr}
@@ -322,8 +325,9 @@ export default function MeineSpieltageClient({
                 >
                   <div className="mr-auto">
                     <div className="text-sm font-medium text-slate-900">
-                      {fmt(a.datum)} · {a.heim ? "Heim" : "Auswärts"} gegen{" "}
-                      {a.gegner}
+                      {fmt(a.datum)}
+                      {a.uhrzeit ? ` · ${a.uhrzeit.slice(0, 5)} Uhr` : ""} ·{" "}
+                      {a.heim ? "Heim" : "Auswärts"} gegen {a.gegner}
                     </div>
                     <div className="text-[12px] text-slate-500">
                       Ersatz für die {a.teamNummer}. Mannschaft

@@ -163,6 +163,7 @@ export default function MatrixTabelle({
                       <>
                         <div className="text-[11px] font-bold text-slate-700">
                           {fmtDatum(d.datum)}
+                          {d.uhrzeit ? ` · ${d.uhrzeit.slice(0, 5)}` : ""}
                         </div>
                         <div className="max-w-[92px] truncate text-[10px] text-slate-500">
                           {d.heim ? "H" : "A"} · {d.gegner}

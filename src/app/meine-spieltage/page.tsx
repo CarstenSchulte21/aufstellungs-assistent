@@ -78,7 +78,7 @@ export default async function MeineSpieltagePage({
   if (stamm?.mannschaft_id) {
     const { data: spiele } = await supabase
       .from("spiele")
-      .select("id, spieltag_nr, datum, heim, gegner")
+      .select("id, spieltag_nr, datum, uhrzeit, heim, gegner")
       .eq("mannschaft_id", stamm.mannschaft_id)
       .eq("halbserie_id", halbserieId)
       .order("datum");
@@ -95,6 +95,7 @@ export default async function MeineSpieltagePage({
       id: s.id,
       spieltag_nr: s.spieltag_nr,
       datum: s.datum,
+      uhrzeit: s.uhrzeit ?? null,
       heim: s.heim,
       gegner: s.gegner,
       status: (vMap.get(s.id) as any)?.status ?? "nicht_angefragt",
@@ -113,7 +114,7 @@ export default async function MeineSpieltagePage({
   const { data: ers } = await supabase
     .from("ersatzanfragen")
     .select(
-      "id, status, frist_bis, spiel_datum, spiele:spiel_id(spieltag_nr, datum, heim, gegner, mannschaften:mannschaft_id(nummer, name))"
+      "id, status, frist_bis, spiel_datum, spiele:spiel_id(spieltag_nr, datum, uhrzeit, heim, gegner, mannschaften:mannschaft_id(nummer, name))"
     )
     .eq("spieler_id", zielId)
     .in("status", ["freigegeben", "gesendet", "zugesagt", "abgelehnt", "eingeplant"])
@@ -123,6 +124,7 @@ export default async function MeineSpieltagePage({
     status: a.status,
     frist_bis: a.frist_bis,
     datum: a.spiele?.datum ?? a.spiel_datum,
+    uhrzeit: a.spiele?.uhrzeit ?? null,
     spieltag_nr: a.spiele?.spieltag_nr ?? 0,
     heim: a.spiele?.heim ?? true,
     gegner: a.spiele?.gegner ?? "",
