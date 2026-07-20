@@ -405,7 +405,14 @@ export default function S4Client({
                         {i + 1}
                       </span>
                       <div className="mr-auto min-w-[180px]">
-                        <div className="font-semibold text-slate-900">{c.name}</div>
+                        <div className="font-semibold text-slate-900">
+                          {c.name}
+                          {c.favorit && (
+                            <span className="ml-2 rounded bg-violet-50 px-1.5 py-0.5 text-[11px] font-semibold text-violet-700">
+                              Favorit
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[12px] text-slate-500">
                           {c.teamNummer}. Mannschaft · Pos. {c.position} · QTTR{" "}
                           {c.qttr} · {c.einsaetze} Ersatzeinsätze

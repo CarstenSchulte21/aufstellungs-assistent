@@ -5,7 +5,7 @@ import {
   type EngineConfig,
   type Kandidat,
 } from "./kandidaten";
-import { ladeEffektiveKaderIds } from "@/lib/kader";
+import { ladeEffektiveKader } from "@/lib/kader";
 
 // Sammelt alle nötigen Daten aus der DB und ruft die reine Engine auf.
 export async function ladeKandidaten(
@@ -129,12 +129,19 @@ export async function ladeKandidaten(
     config,
   });
 
-  // Spieler, die schon im operativen Kader dieser Mannschaft stehen (Stamm oder
-  // Favorit), werden nicht als Ersatz angeboten — sie gehören ohnehin dazu.
-  const imKader = new Set(
-    await ladeEffektiveKaderIds(supabase, hs, (spiel as any).mannschaft_id)
+  // Stammspieler dieser Mannschaft werden nicht als Ersatz angeboten — sie
+  // werden ohnehin automatisch gefragt. Favoriten bleiben in der Liste (dort
+  // sieht der MF Warnungen, Präferenzen und Einsätze) und werden markiert.
+  const { stamm, favorit } = await ladeEffektiveKader(
+    supabase,
+    hs,
+    (spiel as any).mannschaft_id
   );
-  const gefiltert = result.filter((k) => !imKader.has(k.id));
+  const stammSet = new Set(stamm);
+  const favSet = new Set(favorit);
+  const gefiltert = result
+    .filter((k) => !stammSet.has(k.id))
+    .map((k) => (favSet.has(k.id) ? { ...k, favorit: true } : k));
 
   return { kandidaten: gefiltert, teamNummer };
 }

@@ -61,6 +61,7 @@ export type Kandidat = {
   einsaetze: number;
   warnungen: string[];
   locked: boolean; // offener Lock -> nur informativ, nicht freigebbar
+  favorit?: boolean; // im Kader dieser Mannschaft als Favorit hinterlegt
 };
 
 const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
