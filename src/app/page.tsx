@@ -6,8 +6,7 @@ import { loadSpielerAufgaben } from "@/lib/spielerinbox";
 import { loadTeams, loadMatrix } from "@/lib/matrix";
 import { ladeStammTeamId } from "@/lib/kader";
 import AppHeader from "@/components/AppHeader";
-import MatrixTabelle from "@/components/MatrixTabelle";
-import TeamSlider from "./TeamSlider";
+import TeamMatrixBereich from "./TeamMatrixBereich";
 import { InboxAufgaben, SpielerAufgabenListe } from "./UebersichtAufgaben";
 
 export const dynamic = "force-dynamic";
@@ -99,20 +98,12 @@ export default async function Uebersicht({
       />
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-5">
         {selectedTeamId ? (
-          <section>
-            <TeamSlider
-              teams={alle}
-              selectedTeamId={selectedTeamId}
-              ownTeamId={ownTeamId}
-            />
-            <MatrixTabelle
-              teams={alle}
-              matrix={matrix}
-              selectedTeamId={selectedTeamId}
-              basePath="/"
-              zeigeAuswahl={false}
-            />
-          </section>
+          <TeamMatrixBereich
+            teams={alle}
+            initialMatrix={matrix}
+            initialTeamId={selectedTeamId}
+            ownTeamId={ownTeamId}
+          />
         ) : (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
             Noch keine Mannschaften angelegt.

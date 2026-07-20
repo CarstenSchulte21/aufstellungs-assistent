@@ -32,18 +32,22 @@ export default function MatrixTabelle({
   selectedTeamId,
   basePath = "/",
   zeigeAuswahl = true,
+  realtime = true,
 }: {
   teams: TeamRow[];
   matrix: MatrixData | null;
   selectedTeamId: string;
   basePath?: string;
   zeigeAuswahl?: boolean;
+  realtime?: boolean;
 }) {
   const router = useRouter();
   const [nurLuecken, setNurLuecken] = useState(false);
 
   // Realtime: bei jeder Änderung an Verfügbarkeiten neu laden.
+  // (Wird abgeschaltet, wenn ein Eltern-Container das selbst übernimmt.)
   useEffect(() => {
+    if (!realtime) return;
     const supabase = createClient();
     const channel = supabase
       .channel("matrix-verfuegbarkeiten")
@@ -56,7 +60,7 @@ export default function MatrixTabelle({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [router]);
+  }, [router, realtime]);
 
   const team = matrix?.team;
   const roster = matrix?.roster ?? [];

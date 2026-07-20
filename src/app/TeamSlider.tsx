@@ -7,12 +7,16 @@ export default function TeamSlider({
   teams,
   selectedTeamId,
   ownTeamId,
+  onWechsel,
 }: {
   teams: TeamRow[]; // aufsteigend nach Nummer (1 = höchste)
   selectedTeamId: string;
   ownTeamId: string | null;
+  onWechsel?: (id: string) => void;
 }) {
   const router = useRouter();
+  const wechsle = (id: string) =>
+    onWechsel ? onWechsel(id) : router.push(`/?team=${id}`);
   const idx = teams.findIndex((t) => t.id === selectedTeamId);
   const hoeher = idx > 0 ? teams[idx - 1] : null; // links = nächsthöher
   const tiefer = idx < teams.length - 1 ? teams[idx + 1] : null; // rechts = nächsttiefer
@@ -24,7 +28,7 @@ export default function TeamSlider({
   return (
     <div className="mb-3 flex items-center gap-3">
       <button
-        onClick={() => hoeher && router.push(`/?team=${hoeher.id}`)}
+        onClick={() => hoeher && wechsle(hoeher.id)}
         disabled={!hoeher}
         aria-label="Nächsthöhere Mannschaft"
         title={hoeher ? hoeher.name : ""}
@@ -50,7 +54,7 @@ export default function TeamSlider({
       </div>
 
       <button
-        onClick={() => tiefer && router.push(`/?team=${tiefer.id}`)}
+        onClick={() => tiefer && wechsle(tiefer.id)}
         disabled={!tiefer}
         aria-label="Nächsttiefere Mannschaft"
         title={tiefer ? tiefer.name : ""}
