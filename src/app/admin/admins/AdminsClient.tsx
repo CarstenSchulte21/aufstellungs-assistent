@@ -17,6 +17,33 @@ export default function AdminsClient({ users }: { users: UserRow[] }) {
   const supabase = createClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
+  const [pwFuer, setPwFuer] = useState<string | null>(null);
+  const [pwWert, setPwWert] = useState("");
+
+  async function passwortSetzen(u: UserRow) {
+    if (pwWert.length < 6) {
+      setMsg("Das Passwort muss mindestens 6 Zeichen haben.");
+      return;
+    }
+    setBusy(u.id + ":pw");
+    setMsg("");
+    const res = await fetch("/api/admin/passwort", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: u.id, passwort: pwWert }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBusy(null);
+    if (!res.ok) {
+      setMsg(json.error ?? "Fehler beim Setzen des Passworts.");
+      return;
+    }
+    setMsg(
+      `Neues Passwort für ${u.name || u.email} gesetzt. Bitte der Person persönlich mitteilen.`
+    );
+    setPwFuer(null);
+    setPwWert("");
+  }
 
   async function toggle(u: UserRow, next: boolean) {
     setBusy(u.id);
@@ -66,6 +93,45 @@ export default function AdminsClient({ users }: { users: UserRow[] }) {
               >
                 {busy === u.id ? "…" : u.istAdmin ? "Admin ✓" : "Zum Admin machen"}
               </button>
+            )}
+
+            <button
+              onClick={() => {
+                setPwFuer(pwFuer === u.id ? null : u.id);
+                setPwWert("");
+                setMsg("");
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[13px] font-medium text-slate-700 hover:border-slate-400"
+            >
+              Passwort setzen
+            </button>
+
+            {pwFuer === u.id && (
+              <div className="flex w-full flex-wrap items-center gap-2 border-t border-slate-100 pt-2">
+                <input
+                  type="text"
+                  value={pwWert}
+                  onChange={(e) => setPwWert(e.target.value)}
+                  placeholder="neues Passwort (mind. 6 Zeichen)"
+                  className="min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                />
+                <button
+                  onClick={() => passwortSetzen(u)}
+                  disabled={busy === u.id + ":pw"}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
+                >
+                  {busy === u.id + ":pw" ? "…" : "Speichern"}
+                </button>
+                <button
+                  onClick={() => {
+                    setPwFuer(null);
+                    setPwWert("");
+                  }}
+                  className="px-2 text-[13px] text-slate-500 hover:underline"
+                >
+                  Abbrechen
+                </button>
+              </div>
             )}
           </div>
         ))}
