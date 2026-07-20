@@ -91,6 +91,8 @@ export async function POST(req: Request): Promise<Response> {
         datum: neuesDatum,
         uhrzeit: neueUhrzeit,
         verlegt_von: datumGeaendert ? (spiel as any).datum : (spiel as any).verlegt_von,
+        zuletzt_geaendert_am: new Date().toISOString(),
+        zuletzt_geaendert_art: datumGeaendert ? "verlegt" : "uhrzeit",
       })
       .eq("id", spiel_id);
 
@@ -167,7 +169,12 @@ export async function POST(req: Request): Promise<Response> {
     const neuOrt: string | null = body.ort ?? (spiel as any).ort;
     await admin
       .from("spiele")
-      .update({ heim: neuHeim, ort: neuOrt })
+      .update({
+        heim: neuHeim,
+        ort: neuOrt,
+        zuletzt_geaendert_am: new Date().toISOString(),
+        zuletzt_geaendert_art: "heimrecht",
+      })
       .eq("id", spiel_id);
     await admin.from("audit_log").insert({
       aktion: "spiel_heimrecht",
@@ -192,7 +199,11 @@ export async function POST(req: Request): Promise<Response> {
   if (typ === "absetzen") {
     await admin
       .from("spiele")
-      .update({ status: "abgesetzt" })
+      .update({
+        status: "abgesetzt",
+        zuletzt_geaendert_am: new Date().toISOString(),
+        zuletzt_geaendert_art: "abgesetzt",
+      })
       .eq("id", spiel_id);
     await admin.from("audit_log").insert({
       aktion: "spiel_abgesetzt",

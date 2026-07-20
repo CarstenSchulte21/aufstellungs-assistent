@@ -60,7 +60,10 @@ export async function POST(req: Request): Promise<Response> {
 
   await admin
     .from("ersatzanfragen")
-    .update({ status: "zurueckgezogen" })
+    .update({
+      status: "zurueckgezogen",
+      beantwortet_am: new Date().toISOString(),
+    })
     .eq("id", ersatzanfrage_id);
 
   // Zusage für dieses Spiel entfernen — der Spieler zählt nicht mehr mit.

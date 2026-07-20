@@ -3,11 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth";
 import { loadInbox } from "@/lib/inbox";
 import { loadSpielerAufgaben } from "@/lib/spielerinbox";
+import { loadSpielerInfos } from "@/lib/spielerinfos";
 import { loadTeams, loadMatrix } from "@/lib/matrix";
 import { ladeStammTeamId } from "@/lib/kader";
 import AppHeader from "@/components/AppHeader";
 import TeamMatrixBereich from "./TeamMatrixBereich";
-import { InboxAufgaben, SpielerAufgabenListe } from "./UebersichtAufgaben";
+import {
+  InboxAufgaben,
+  SpielerAufgabenListe,
+  SpielerInfoListe,
+} from "./UebersichtAufgaben";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +59,10 @@ export default async function Uebersicht({
   const spielerItems =
     !management && session.spielerId
       ? await loadSpielerAufgaben(supabase, session.spielerId)
+      : [];
+  const spielerInfos =
+    !management && session.spielerId
+      ? await loadSpielerInfos(supabase, session.spielerId)
       : [];
   const spielerCount = session.spielerId
     ? management
@@ -112,7 +121,12 @@ export default async function Uebersicht({
         {management ? (
           <InboxAufgaben items={inboxItems} />
         ) : (
-          session.spielerId && <SpielerAufgabenListe items={spielerItems} />
+          session.spielerId && (
+            <>
+              <SpielerAufgabenListe items={spielerItems} />
+              <SpielerInfoListe items={spielerInfos} />
+            </>
+          )
         )}
       </main>
     </div>
