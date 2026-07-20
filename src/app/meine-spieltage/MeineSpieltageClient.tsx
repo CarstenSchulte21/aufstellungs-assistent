@@ -38,6 +38,15 @@ function fmt(iso: string) {
   });
 }
 
+// Kompakt für Listenzeilen (ohne Jahr) — spart Platz neben den Buttons.
+function fmtTag(iso: string) {
+  return new Date(iso + "T00:00:00").toLocaleDateString("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
 function heute() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Berlin",
@@ -259,12 +268,14 @@ export default function MeineSpieltageClient({
               <div
                 key={s.id}
                 id={`s-${s.id}`}
-                className="flex scroll-mt-4 flex-wrap items-center gap-3 p-3"
+                className="flex scroll-mt-4 flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3"
               >
-                <div className="mr-auto">
+                <div className="min-w-0 sm:mr-auto">
                   <div className="text-sm font-medium text-slate-900">
-                    {fmt(s.datum)}
-                    {s.uhrzeit ? ` · ${s.uhrzeit.slice(0, 5)} Uhr` : ""} ·{" "}
+                    {fmtTag(s.datum)}
+                    {s.uhrzeit ? ` · ${s.uhrzeit.slice(0, 5)}` : ""}
+                  </div>
+                  <div className="truncate text-[13px] text-slate-600">
                     {s.heim ? "Heim" : "Auswärts"} gegen {s.gegner}
                   </div>
                   <div className="text-[12px] text-slate-500">
@@ -279,28 +290,30 @@ export default function MeineSpieltageClient({
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => antwort(s.id, "zugesagt")}
-                  disabled={busy === s.id}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
-                    s.status === "zugesagt"
-                      ? "bg-emerald-500 text-white"
-                      : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                  }`}
-                >
-                  ✓ Zusagen
-                </button>
-                <button
-                  onClick={() => antwort(s.id, "abgesagt")}
-                  disabled={busy === s.id}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
-                    s.status === "abgesagt"
-                      ? "bg-rose-500 text-white"
-                      : "border border-rose-300 text-rose-600 hover:bg-rose-50"
-                  }`}
-                >
-                  ✕ Absagen
-                </button>
+                <div className="flex flex-none gap-2">
+                  <button
+                    onClick={() => antwort(s.id, "zugesagt")}
+                    disabled={busy === s.id}
+                    className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold sm:flex-none ${
+                      s.status === "zugesagt"
+                        ? "bg-emerald-500 text-white"
+                        : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    }`}
+                  >
+                    ✓ Zusagen
+                  </button>
+                  <button
+                    onClick={() => antwort(s.id, "abgesagt")}
+                    disabled={busy === s.id}
+                    className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold sm:flex-none ${
+                      s.status === "abgesagt"
+                        ? "bg-rose-500 text-white"
+                        : "border border-rose-300 text-rose-600 hover:bg-rose-50"
+                    }`}
+                  >
+                    ✕ Absagen
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -321,12 +334,14 @@ export default function MeineSpieltageClient({
                 <div
                   key={a.id}
                   id={`e-${a.id}`}
-                  className="flex scroll-mt-4 flex-wrap items-center gap-3 p-3"
+                  className="flex scroll-mt-4 flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3"
                 >
-                  <div className="mr-auto">
+                  <div className="min-w-0 sm:mr-auto">
                     <div className="text-sm font-medium text-slate-900">
-                      {fmt(a.datum)}
-                      {a.uhrzeit ? ` · ${a.uhrzeit.slice(0, 5)} Uhr` : ""} ·{" "}
+                      {fmtTag(a.datum)}
+                      {a.uhrzeit ? ` · ${a.uhrzeit.slice(0, 5)}` : ""}
+                    </div>
+                    <div className="truncate text-[13px] text-slate-600">
                       {a.heim ? "Heim" : "Auswärts"} gegen {a.gegner}
                     </div>
                     <div className="text-[12px] text-slate-500">
@@ -347,11 +362,11 @@ export default function MeineSpieltageClient({
                     </div>
                   </div>
                   {a.status !== "eingeplant" && a.status !== "abgelaufen" && (
-                    <>
+                    <div className="flex flex-none gap-2">
                       <button
                         onClick={() => antwortErsatz(a.id, "ja")}
                         disabled={busy === "ers:" + a.id}
-                        className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                        className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold sm:flex-none ${
                           zugesagt
                             ? "bg-emerald-500 text-white"
                             : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
@@ -362,7 +377,7 @@ export default function MeineSpieltageClient({
                       <button
                         onClick={() => antwortErsatz(a.id, "nein")}
                         disabled={busy === "ers:" + a.id}
-                        className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                        className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold sm:flex-none ${
                           a.status === "abgelehnt"
                             ? "bg-rose-500 text-white"
                             : "border border-rose-300 text-rose-600 hover:bg-rose-50"
@@ -370,7 +385,7 @@ export default function MeineSpieltageClient({
                       >
                         ✕ Diesmal nicht
                       </button>
-                    </>
+                    </div>
                   )}
                   {offen && (
                     <span className="w-full text-[11px] text-slate-400">
