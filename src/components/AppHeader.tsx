@@ -47,6 +47,19 @@ export default function AppHeader({
     router.refresh();
   }
 
+  // Build-Stempel (nur für echte Admins) — zeigt, welcher Stand geladen ist.
+  const buildZeit = process.env.NEXT_PUBLIC_BUILD_ZEIT;
+  const buildSha = process.env.NEXT_PUBLIC_BUILD_SHA;
+  const buildLabel = buildZeit
+    ? new Date(buildZeit).toLocaleString("de-DE", {
+        timeZone: "Europe/Berlin",
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
   return (
     <header className="sticky top-0 z-40 bg-primary text-white shadow-md">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-3">
@@ -60,6 +73,14 @@ export default function AppHeader({
             </div>
             <div className="text-[11px] text-blue-200">
               {userEmail} · {modusLabel}
+              {realIsAdmin && buildLabel && (
+                <span
+                  title={`Build ${buildSha} · ${buildLabel}`}
+                  className="ml-2 rounded bg-white/10 px-1.5 py-0.5 font-medium text-blue-100"
+                >
+                  Stand {buildLabel}
+                </span>
+              )}
             </div>
           </div>
         </a>
