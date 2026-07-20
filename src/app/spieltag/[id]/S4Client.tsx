@@ -110,11 +110,49 @@ export default function S4Client({
 
   async function setStatus(spielerId: string, status: string) {
     setBusy(spielerId);
-    await supabase.from("verfuegbarkeiten").upsert(
-      { spiel_id: spiel.id, spieler_id: spielerId, status, quelle: "admin" },
-      { onConflict: "spiel_id,spieler_id" }
-    );
+    if (status === "reset") {
+      // Eintrag komplett entfernen — die Zelle ist danach wieder leer.
+      await supabase
+        .from("verfuegbarkeiten")
+        .delete()
+        .eq("spiel_id", spiel.id)
+        .eq("spieler_id", spielerId);
+    } else {
+      await supabase.from("verfuegbarkeiten").upsert(
+        { spiel_id: spiel.id, spieler_id: spielerId, status, quelle: "admin" },
+        { onConflict: "spiel_id,spieler_id" }
+      );
+    }
     setBusy(null);
+    router.refresh();
+  }
+
+  async function anfrageZurueckziehen(a: ErsatzAnfrage) {
+    const eingeplant = a.status === "eingeplant";
+    if (
+      !confirm(
+        eingeplant
+          ? `Einplanung von ${a.name} wirklich aufheben? Der Spieler wird informiert und zählt nicht mehr mit.`
+          : `Anfrage an ${a.name} wirklich zurückziehen? Der Spieler wird informiert.`
+      )
+    )
+      return;
+    setBusy("zur:" + a.id);
+    setErsatzInfo("");
+    const res = await fetch("/api/ersatz/zurueckziehen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ersatzanfrage_id: a.id }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBusy(null);
+    setErsatzInfo(
+      res.ok
+        ? eingeplant
+          ? "Einplanung aufgehoben ✓"
+          : "Anfrage zurückgezogen ✓"
+        : json.error || "Fehler"
+    );
     router.refresh();
   }
 
@@ -259,6 +297,7 @@ export default function S4Client({
                     <option value="abgesagt">Abgesagt</option>
                     <option value="unsicher">Unsicher</option>
                     <option value="angefragt">Angefragt</option>
+                    <option value="reset">Zurücksetzen (leer)</option>
                   </select>
                   <button
                     onClick={() => erneutAnfragen(p.id)}
@@ -321,6 +360,23 @@ export default function S4Client({
                         className="ml-auto rounded-lg bg-emerald-600 px-2.5 py-1 text-[12px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         Fest einplanen
+                      </button>
+                    )}
+                    {["freigegeben", "gesendet", "zugesagt", "eingeplant"].includes(
+                      a.status
+                    ) && (
+                      <button
+                        onClick={() => anfrageZurueckziehen(a)}
+                        disabled={busy === "zur:" + a.id}
+                        className={`rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[12px] font-medium text-slate-600 hover:border-rose-300 hover:text-rose-600 disabled:opacity-50 ${
+                          a.status === "zugesagt" ? "" : "ml-auto"
+                        }`}
+                      >
+                        {busy === "zur:" + a.id
+                          ? "…"
+                          : a.status === "eingeplant"
+                          ? "Einplanung aufheben"
+                          : "Zurückziehen"}
                       </button>
                     )}
                   </div>
