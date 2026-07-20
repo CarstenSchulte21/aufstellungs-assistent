@@ -118,7 +118,9 @@ export function ermittleKandidaten(ctx: EngineKontext): Kandidat[] {
 
     const n = einsaetze[s.id] ?? 0;
     if (max && max > 0 && n >= max)
-      warnungen.push(`Bereits ${n} Ersatzeinsätze (Vereinsgrenze ${max})`);
+      warnungen.push(
+        `Bereits ${n} ${n === 1 ? "Ersatzeinsatz" : "Ersatzeinsätze"}`
+      );
 
     return {
       id: s.id,
