@@ -157,6 +157,9 @@ export default function AppHeader({
             )}
 
             <div className="my-1 border-t border-slate-100" />
+            <a href="/spieltage" className={item}>
+              Alle Spieltage (Kalender)
+            </a>
             <a href="/konto" className={item}>
               Passwort ändern
             </a>

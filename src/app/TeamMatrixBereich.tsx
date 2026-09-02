@@ -95,12 +95,21 @@ export default function TeamMatrixBereich({
 
   return (
     <section>
-      <TeamSlider
-        teams={teams}
-        selectedTeamId={teamId}
-        ownTeamId={ownTeamId}
-        onWechsel={wechsle}
-      />
+      <div className="flex items-center justify-between gap-2">
+        <TeamSlider
+          teams={teams}
+          selectedTeamId={teamId}
+          ownTeamId={ownTeamId}
+          onWechsel={wechsle}
+        />
+        <a
+          href={`/api/kalender?team=${teamId}`}
+          className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50"
+          title="Alle Spieltage dieser Mannschaft als Kalenderdatei (.ics) herunterladen"
+        >
+          📅 Kalender (.ics)
+        </a>
+      </div>
       <div className={laedt ? "opacity-60 transition-opacity" : ""}>
         <MatrixTabelle
           teams={teams}

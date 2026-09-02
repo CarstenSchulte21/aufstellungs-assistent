@@ -153,6 +153,17 @@ export default async function MeineSpieltagePage({
         ersatzanfragen={ersatzanfragen}
       />
       {session.spielerId && (
+        <div className="mt-4">
+          <a
+            href="/api/kalender"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-600 hover:bg-slate-50"
+            title="Deine Spiele (Stamm-Mannschaft und Ersatzeinsätze) als Kalenderdatei (.ics) herunterladen"
+          >
+            📅 Meine Spiele als Kalender (.ics)
+          </a>
+        </div>
+      )}
+      {session.spielerId && (
         <div className="mt-6">
           <MeinePraeferenzen praeferenzen={meinePraef} />
         </div>
