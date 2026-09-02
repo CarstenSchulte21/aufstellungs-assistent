@@ -80,16 +80,18 @@ export default function KaderClient({
   }
 
   async function saveStamm(p: KaderPlayer, patch: Partial<KaderPlayer>) {
+    // Kanal (Telegram/E-Mail) und Proxy sind unabhängig voneinander.
     const kanal = patch.kanal ?? p.kanal;
     const praeferenzen = patch.praeferenzen ?? p.praeferenzen;
-    const proxy = patch.proxy_spieler_id ?? p.proxy_spieler_id;
+    const proxy =
+      "proxy_spieler_id" in patch ? patch.proxy_spieler_id : p.proxy_spieler_id;
     const { error } = await supabase.rpc("mf_update_spieler", {
       p_spieler_id: p.id,
       p_kanal: kanal,
       p_praeferenzen: praeferenzen,
       p_telefon: patch.telefon ?? (p.telefon || null),
       p_email: patch.email ?? (p.email || null),
-      p_proxy_spieler_id: kanal === "proxy" ? proxy : null,
+      p_proxy_spieler_id: proxy || null,
     });
     setInfo((i) => ({
       ...i,
@@ -179,18 +181,36 @@ export default function KaderClient({
 
             {/* Detailzeile */}
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {/* Benachrichtigungs-Kanal */}
+              <label className="text-[12px] text-slate-600">
+                Benachrichtigung über
+                <select
+                  defaultValue={p.kanal === "email" ? "email" : "telegram"}
+                  onChange={(e) => saveStamm(p, { kanal: e.target.value })}
+                  className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                >
+                  <option value="telegram">Telegram</option>
+                  <option value="email">E-Mail</option>
+                </select>
+                {p.kanal === "email" && !p.email && (
+                  <span className="mt-1 block text-[11px] font-medium text-amber-600">
+                    Keine E-Mail hinterlegt — bitte unten eintragen.
+                  </span>
+                )}
+                {!!p.praeferenzen?.keine_emails && (
+                  <span className="mt-1 block text-[11px] font-medium text-amber-600">
+                    Hat E-Mails selbst abgeschaltet — bekommt nur Telegram.
+                  </span>
+                )}
+              </label>
+
               {/* Proxy: jemand trägt für diesen Spieler ein */}
               <label className="text-[12px] text-slate-600">
                 Trägt für ihn ein (Proxy)
                 <select
                   defaultValue={p.proxy_spieler_id ?? ""}
                   onChange={(e) =>
-                    saveStamm(
-                      p,
-                      e.target.value
-                        ? { proxy_spieler_id: e.target.value, kanal: "proxy" }
-                        : { proxy_spieler_id: null, kanal: "telegram" }
-                    )
+                    saveStamm(p, { proxy_spieler_id: e.target.value || null })
                   }
                   className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
                 >

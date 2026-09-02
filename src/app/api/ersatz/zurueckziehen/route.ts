@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAdmin } from "@/lib/supabase/admin";
 import { getBot, ensureInit } from "@/lib/telegram/bot";
+import { ladeKontakt, wegFuerKontakt, sendeInfoMail } from "@/lib/benachrichtigung";
 
 export const dynamic = "force-dynamic";
 
@@ -94,28 +95,24 @@ export async function POST(req: Request): Promise<Response> {
     },
   });
 
-  // Spieler informieren (falls gekoppelt)
+  // Spieler informieren — je nach Kanal
   let benachrichtigt = false;
   try {
-    const { data: sp } = await admin
-      .from("spieler")
-      .select("telegram_chat_id")
-      .eq("id", (anfrage as any).spieler_id)
-      .maybeSingle();
-    if (sp?.telegram_chat_id) {
-      const ha = (spiel as any).heim ? "Heim" : "Auswärts";
-      const teamName = (spiel as any).mannschaften?.name ?? "Mannschaft";
-      const wann = `${fmtDatum((spiel as any).datum)}${
-        (spiel as any).uhrzeit ? ` · ${String((spiel as any).uhrzeit).slice(0, 5)} Uhr` : ""
-      } · ${ha} gegen ${(spiel as any).gegner}`;
+    const kontakt = await ladeKontakt(admin, (anfrage as any).spieler_id);
+    const ha = (spiel as any).heim ? "Heim" : "Auswärts";
+    const teamName = (spiel as any).mannschaften?.name ?? "Mannschaft";
+    const wann = `${fmtDatum((spiel as any).datum)}${
+      (spiel as any).uhrzeit ? ` · ${String((spiel as any).uhrzeit).slice(0, 5)} Uhr` : ""
+    } · ${ha} gegen ${(spiel as any).gegner}`;
+    const weg = wegFuerKontakt(kontakt);
+
+    if (weg === "telegram" && kontakt?.chatId) {
       const text = warEingeplant
         ? `ℹ️ *Einplanung aufgehoben*\n${teamName}: ${wann}.\nDu wirst doch nicht gebraucht — danke dir trotzdem! 🏓`
         : `ℹ️ *Anfrage zurückgezogen*\n${teamName}: ${wann}.\nDie Ersatzanfrage hat sich erledigt — du musst nichts weiter tun.`;
       const bot = getBot();
       await ensureInit(bot);
-      await bot.api.sendMessage(Number(sp.telegram_chat_id), text, {
-        parse_mode: "Markdown",
-      });
+      await bot.api.sendMessage(kontakt.chatId, text, { parse_mode: "Markdown" });
       await admin.from("nachrichten").insert({
         spieler_id: (anfrage as any).spieler_id,
         spiel_id: (spiel as any).id,
@@ -126,6 +123,26 @@ export async function POST(req: Request): Promise<Response> {
         inhalt: warEingeplant ? "Einplanung aufgehoben" : "Anfrage zurückgezogen",
       });
       benachrichtigt = true;
+    } else if (weg === "email" && kontakt) {
+      benachrichtigt = await sendeInfoMail(
+        admin,
+        kontakt,
+        warEingeplant
+          ? `Einplanung aufgehoben: ${teamName} — ${wann}`
+          : `Anfrage zurückgezogen: ${teamName} — ${wann}`,
+        warEingeplant
+          ? [
+              `<strong>Einplanung aufgehoben</strong>`,
+              `${teamName}: ${wann}.`,
+              `Du wirst doch nicht gebraucht — danke dir trotzdem! 🏓`,
+            ]
+          : [
+              `<strong>Anfrage zurückgezogen</strong>`,
+              `${teamName}: ${wann}.`,
+              `Die Ersatzanfrage hat sich erledigt — du musst nichts weiter tun.`,
+            ],
+        (spiel as any).id
+      );
     }
   } catch {
     // Benachrichtigung ist optional

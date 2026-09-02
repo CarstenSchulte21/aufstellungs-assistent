@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getAdmin } from "@/lib/supabase/admin";
 import { getBot, ensureInit } from "@/lib/telegram/bot";
 import { ladeSpiel, abfrageText, abfrageKeyboard } from "@/lib/telegram/abfrage";
+import {
+  ladeKontakt,
+  wegFuerKontakt,
+  sendeAbfrageMail,
+} from "@/lib/benachrichtigung";
 import { cronErlaubt, heuteBerlin } from "@/lib/cron";
 import { pruefeLockTimeout } from "@/lib/ersatzLock";
 
@@ -55,7 +60,6 @@ export async function GET(req: Request): Promise<Response> {
     if (!spiel || spiel.halbserie_id !== hs.id) continue;
     if (spiel.status === "abgesetzt") continue; // abgesetztes Spiel
     if (spiel.datum < heute) continue; // Spiel vorbei
-    if (!chat) continue; // nur gekoppelte Spieler erinnern
 
     const cfg = cfgVon.get(spiel.mannschaft_id) ?? { std: 48, max: 2 };
     const elapsedH =
@@ -67,25 +71,37 @@ export async function GET(req: Request): Promise<Response> {
     if (count < cfg.max) {
       const info = await ladeSpiel(admin, (v as any).spiel_id);
       if (!info) continue;
+      const kontakt = await ladeKontakt(admin, (v as any).spieler_id);
+      if (!kontakt) continue;
+      const weg = wegFuerKontakt(kontakt);
+      if (weg === "keiner") continue;
       try {
-        const msg = await bot.api.sendMessage(
-          Number(chat),
-          "⏰ Kleine Erinnerung:\n\n" + abfrageText(info),
-          { parse_mode: "Markdown", reply_markup: abfrageKeyboard(info.id) }
-        );
+        let zugestellt = false;
+        if (weg === "telegram" && kontakt.chatId) {
+          const msg = await bot.api.sendMessage(
+            kontakt.chatId,
+            "⏰ Kleine Erinnerung:\n\n" + abfrageText(info),
+            { parse_mode: "Markdown", reply_markup: abfrageKeyboard(info.id) }
+          );
+          await admin.from("nachrichten").insert({
+            spieler_id: (v as any).spieler_id,
+            spiel_id: info.id,
+            richtung: "ausgehend",
+            kanal: "telegram",
+            typ: "reminder",
+            inhalt: "Erinnerung an offene Abfrage",
+            telegram_message_id: msg.message_id,
+          });
+          zugestellt = true;
+        } else if (weg === "email") {
+          // Erinnerung = dieselbe Abfrage-Mail mit Ein-Klick-Links
+          zugestellt = await sendeAbfrageMail(admin, kontakt, info);
+        }
+        if (!zugestellt) continue;
         await admin
           .from("verfuegbarkeiten")
           .update({ status: "erinnert", erinnert_count: count + 1 })
           .eq("id", (v as any).id);
-        await admin.from("nachrichten").insert({
-          spieler_id: (v as any).spieler_id,
-          spiel_id: info.id,
-          richtung: "ausgehend",
-          kanal: "telegram",
-          typ: "reminder",
-          inhalt: "Erinnerung an offene Abfrage",
-          telegram_message_id: msg.message_id,
-        });
         erinnert++;
       } catch {
         // Zustellfehler überspringen

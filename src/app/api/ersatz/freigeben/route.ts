@@ -3,6 +3,23 @@ import { getSession } from "@/lib/auth";
 import { getAdmin } from "@/lib/supabase/admin";
 import { getBot, ensureInit } from "@/lib/telegram/bot";
 import { ersatzKeyboard, ersatzText } from "@/lib/telegram/abfrage";
+import {
+  ladeKontakt,
+  wegFuerKontakt,
+  istErsteMail,
+  spielBeschreibung,
+} from "@/lib/benachrichtigung";
+import {
+  sendeMail,
+  mailLayout,
+  mailAbsatz,
+  mailButton,
+  mailErstkontakt,
+  appUrl,
+  MAIL_GRUEN,
+  MAIL_ROT,
+} from "@/lib/mail";
+import { baueAntwortToken } from "@/lib/antwortToken";
 
 export const dynamic = "force-dynamic";
 
@@ -66,21 +83,18 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  // Bot-Versand (nur wenn gekoppelt)
-  const { data: sp } = await admin
-    .from("spieler")
-    .select("telegram_chat_id, name")
-    .eq("id", spieler_id)
-    .maybeSingle();
+  // Versand je nach Kanal (Telegram oder E-Mail)
+  const kontakt = await ladeKontakt(admin, spieler_id);
+  const weg = wegFuerKontakt(kontakt);
 
-  if (!sp?.telegram_chat_id) {
+  if (weg === "keiner") {
     return NextResponse.json({
       ok: true,
       gesendet: false,
       hinweis:
         "Anfrage freigegeben, aber " +
-        (sp?.name ?? "der Spieler") +
-        " ist nicht mit Telegram gekoppelt — bitte manuell anfragen.",
+        (kontakt?.name ?? "der Spieler") +
+        " ist auf keinem Kanal erreichbar — bitte manuell anfragen.",
     });
   }
 
@@ -95,27 +109,64 @@ export async function POST(req: Request): Promise<Response> {
   const fristBis = new Date(Date.now() + stunden * 3600_000).toISOString();
 
   try {
-    const bot = getBot();
-    await ensureInit(bot);
-    const msg = await bot.api.sendMessage(
-      Number(sp.telegram_chat_id),
-      ersatzText(info) + `\n\n_Bitte bis in ${stunden} h antworten._`,
-      { parse_mode: "Markdown", reply_markup: ersatzKeyboard(anfrage.id) }
-    );
+    if (weg === "telegram" && kontakt?.chatId) {
+      const bot = getBot();
+      await ensureInit(bot);
+      const msg = await bot.api.sendMessage(
+        kontakt.chatId,
+        ersatzText(info) + `\n\n_Bitte bis in ${stunden} h antworten._`,
+        { parse_mode: "Markdown", reply_markup: ersatzKeyboard(anfrage.id) }
+      );
+      await admin.from("nachrichten").insert({
+        spieler_id,
+        spiel_id,
+        ersatzanfrage_id: anfrage.id,
+        richtung: "ausgehend",
+        kanal: "telegram",
+        typ: "ersatzanfrage",
+        inhalt: ersatzText(info),
+        telegram_message_id: msg.message_id,
+      });
+    } else if (weg === "email" && kontakt) {
+      const basis = appUrl();
+      const link = (a: "zugesagt" | "abgesagt") =>
+        `${basis}/antwort?t=${baueAntwortToken(spieler_id, spiel_id, a)}`;
+      const erste = await istErsteMail(admin, spieler_id);
+      const html = mailLayout(
+        (erste ? mailErstkontakt() : "") +
+          mailAbsatz(`<strong>Ersatz gesucht</strong> — die ${info.teamName} braucht dich!`) +
+          mailAbsatz(spielBeschreibung(info)) +
+          mailAbsatz(`Kannst du aushelfen? Bitte innerhalb von ${stunden} Stunden antworten:`) +
+          mailButton(link("zugesagt"), "✅ Ich helfe aus", MAIL_GRUEN) +
+          mailButton(link("abgesagt"), "❌ Diesmal nicht", MAIL_ROT)
+      );
+      const ok = await sendeMail({
+        an: kontakt.email as string,
+        name: kontakt.name,
+        betreff: `Ersatz gesucht: ${info.teamName} — ${spielBeschreibung(info)}`,
+        html,
+      });
+      if (!ok)
+        return NextResponse.json({
+          ok: true,
+          gesendet: false,
+          hinweis: "Freigegeben, aber die E-Mail konnte nicht gesendet werden.",
+        });
+      await admin.from("nachrichten").insert({
+        spieler_id,
+        spiel_id,
+        ersatzanfrage_id: anfrage.id,
+        richtung: "ausgehend",
+        kanal: "email",
+        typ: "ersatzanfrage",
+        inhalt: `Ersatzanfrage per E-Mail: ${spielBeschreibung(info)}`,
+      });
+    }
+
     await admin
       .from("ersatzanfragen")
       .update({ status: "gesendet", gesendet_am: new Date().toISOString(), frist_bis: fristBis })
       .eq("id", anfrage.id);
-    await admin.from("nachrichten").insert({
-      spieler_id,
-      spiel_id,
-      ersatzanfrage_id: anfrage.id,
-      richtung: "ausgehend",
-      kanal: "telegram",
-      typ: "ersatzanfrage",
-      inhalt: ersatzText(info),
-      telegram_message_id: msg.message_id,
-    });
     return NextResponse.json({ ok: true, gesendet: true });
   } catch (e) {
     return NextResponse.json({

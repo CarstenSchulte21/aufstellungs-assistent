@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAdmin } from "@/lib/supabase/admin";
 import { getBot, ensureInit } from "@/lib/telegram/bot";
+import { ladeKontakt, wegFuerKontakt, sendeInfoMail } from "@/lib/benachrichtigung";
 
 export const dynamic = "force-dynamic";
 
@@ -76,24 +77,24 @@ export async function POST(req: Request): Promise<Response> {
     details: { spiel_id: (spiel as any).id, spieler_id: (anfrage as any).spieler_id },
   });
 
-  // Spieler final benachrichtigen (falls gekoppelt)
+  // Spieler final benachrichtigen — je nach Kanal
   let benachrichtigt = false;
   try {
-    const { data: sp } = await admin
-      .from("spieler")
-      .select("telegram_chat_id")
-      .eq("id", (anfrage as any).spieler_id)
-      .maybeSingle();
-    if (sp?.telegram_chat_id) {
-      const ha = (spiel as any).heim ? "Heim" : "Auswärts";
-      const teamName = (spiel as any).mannschaften?.name ?? "Mannschaft";
+    const kontakt = await ladeKontakt(admin, (anfrage as any).spieler_id);
+    const ha = (spiel as any).heim ? "Heim" : "Auswärts";
+    const teamName = (spiel as any).mannschaften?.name ?? "Mannschaft";
+    const wann = `${fmtDatum((spiel as any).datum)} · ${ha} gegen ${
+      (spiel as any).gegner
+    }`;
+    const weg = wegFuerKontakt(kontakt);
+
+    if (weg === "telegram" && kontakt?.chatId) {
       const bot = getBot();
       await ensureInit(bot);
       await bot.api.sendMessage(
-        Number(sp.telegram_chat_id),
+        kontakt.chatId,
         `✅ *Du bist fest eingeplant!*\n` +
-          `Spieltag ${(spiel as any).spieltag_nr} der ${teamName}: ` +
-          `${fmtDatum((spiel as any).datum)} · ${ha} gegen ${(spiel as any).gegner}.\n\n` +
+          `Spieltag ${(spiel as any).spieltag_nr} der ${teamName}: ${wann}.\n\n` +
           `Bitte sei rechtzeitig da. Danke fürs Aushelfen! 🏓`,
         { parse_mode: "Markdown" }
       );
@@ -107,6 +108,18 @@ export async function POST(req: Request): Promise<Response> {
         inhalt: "Fest eingeplant",
       });
       benachrichtigt = true;
+    } else if (weg === "email" && kontakt) {
+      benachrichtigt = await sendeInfoMail(
+        admin,
+        kontakt,
+        `Du bist fest eingeplant: ${teamName} — ${wann}`,
+        [
+          `<strong>Du bist fest eingeplant!</strong>`,
+          `Spieltag ${(spiel as any).spieltag_nr} der ${teamName}: ${wann}.`,
+          `Bitte sei rechtzeitig da. Danke fürs Aushelfen! 🏓`,
+        ],
+        (spiel as any).id
+      );
     }
   } catch {
     // Benachrichtigung ist optional

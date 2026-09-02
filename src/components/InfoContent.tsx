@@ -93,8 +93,14 @@ export default function InfoContent({ rolle }: { rolle: Rolle }) {
           der Admin.
         </p>
         <p>
-          <strong>Bot:</strong> Ohne deine Einwilligung bekommst du keine
-          Telegram-Nachrichten; die App kannst du im Lesemodus nutzen.
+          <strong>Benachrichtigungen:</strong> Abfragen kommen per Telegram oder
+          per E-Mail — je nachdem, was für dich hinterlegt ist. Ohne deine
+          Einwilligung bekommst du keine Telegram-Nachrichten; die App kannst du
+          im Lesemodus nutzen.
+        </p>
+        <p>
+          <strong>Keine E-Mails?</strong> Unter Spieltagsplanung → Meine
+          Präferenzen kannst du E-Mails an dich jederzeit selbst abschalten.
         </p>
         <p>
           <strong>Widerruf:</strong> jederzeit gegenüber deinem

@@ -285,8 +285,21 @@ export default function FaqContent() {
             Nur zur Spieltagsplanung des Vereins: Name, Kontaktdaten, deine Zu-
             und Absagen sowie Abwesenheiten. In der Matrix sind für den Verein
             nur deine Status sichtbar — Freitext-Kommentare sehen nur du, dein MF
-            und der Admin. Ohne deine Einwilligung bekommst du keine
-            Telegram-Nachrichten; den Widerruf regelst du mit deinem MF.
+            und der Admin. Den Widerruf regelst du mit deinem MF.
+          </p>
+        </Q>
+        <Q frage="Wie werde ich benachrichtigt — und wie stelle ich das ab?">
+          <p>
+            Abfragen kommen entweder per Telegram oder per E-Mail. Welcher Kanal
+            genutzt wird, hängt davon ab, ob du mit dem Bot gekoppelt bist und
+            ob eine Adresse hinterlegt ist. Ohne deine Einwilligung bekommst du
+            keine Telegram-Nachrichten.
+          </p>
+          <p>
+            Du willst keine E-Mails? Unter Spieltagsplanung findest du bei Meine
+            Präferenzen den Schalter Keine E-Mails an mich. Wer den setzt, wird
+            beim Versand übersprungen — dann fragt dich dein Mannschaftsführer
+            persönlich. Jede Mail enthält denselben Hinweis in der Fußzeile.
           </p>
         </Q>
       </Abschnitt>

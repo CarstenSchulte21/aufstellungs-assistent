@@ -1,5 +1,12 @@
 import { InlineKeyboard, type Bot } from "grammy";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  ladeKontakt,
+  wegFuer,
+  wegFuerKontakt,
+  keineMailsGewuenscht,
+  sendeAbfrageMail,
+} from "@/lib/benachrichtigung";
 
 // Mögliche Antworten der Buttons -> Verfügbarkeits-Status
 export const ANTWORT_STATUS: Record<string, string> = {
@@ -283,7 +290,7 @@ async function sendeFrage(
   });
 }
 
-// Abfrage an EINEN Spieler (für Testabfrage aus der Webapp).
+// Abfrage an EINEN Spieler — je nach eingestelltem Kanal per Telegram oder E-Mail.
 export async function sendeAbfrageAnSpieler(
   admin: SupabaseClient,
   bot: Bot,
@@ -292,18 +299,73 @@ export async function sendeAbfrageAnSpieler(
 ): Promise<{ ok: boolean; grund?: string }> {
   const spiel = await ladeSpiel(admin, spielId);
   if (!spiel) return { ok: false, grund: "Spiel nicht gefunden" };
-  const { data: sp } = await admin
-    .from("spieler")
-    .select("telegram_chat_id")
-    .eq("id", spielerId)
-    .maybeSingle();
-  if (!sp?.telegram_chat_id)
-    return { ok: false, grund: "Spieler ist nicht mit Telegram gekoppelt" };
-  await sendeFrage(admin, bot, Number(sp.telegram_chat_id), spielerId, spiel);
-  return { ok: true };
+
+  const kontakt = await ladeKontakt(admin, spielerId);
+  if (!kontakt) return { ok: false, grund: "Spieler nicht gefunden" };
+
+  const weg = wegFuerKontakt(kontakt);
+
+  if (weg === "telegram" && kontakt.chatId) {
+    await sendeFrage(admin, bot, kontakt.chatId, spielerId, spiel);
+    return { ok: true };
+  }
+  if (weg === "email") {
+    const ok = await sendeAbfrageMail(admin, kontakt, spiel);
+    return ok
+      ? { ok: true }
+      : { ok: false, grund: "E-Mail konnte nicht gesendet werden" };
+  }
+  return {
+    ok: false,
+    grund: "Kein Kanal: weder mit Telegram gekoppelt noch E-Mail hinterlegt",
+  };
 }
 
-// Abfrage an ALLE gekoppelten, aktiven Spieler einer Mannschaft (Scheduler).
+// Alle aktiven STAMM-Spieler einer Mannschaft, die überhaupt erreichbar sind
+// (Telegram gekoppelt oder E-Mail hinterlegt).
+export async function erreichbareSpieler(
+  admin: SupabaseClient,
+  spiel: SpielInfo
+): Promise<{ spieler_id: string }[]> {
+  const { data: stamm } = await admin
+    .from("kader_zuordnung")
+    .select(
+      "spieler_id, spieler:spieler_id(telegram_chat_id, email, kanal, praeferenzen)"
+    )
+    .eq("mannschaft_id", spiel.mannschaft_id)
+    .eq("halbserie_id", spiel.halbserie_id)
+    .eq("rolle", "stamm");
+
+  const { data: kader } = await admin
+    .from("kader_status")
+    .select("spieler_id, status")
+    .eq("halbserie_id", spiel.halbserie_id);
+  const aktiv = new Set(
+    (kader ?? [])
+      .filter((k: any) => k.status === "aktiv")
+      .map((k: any) => k.spieler_id)
+  );
+
+  const out: { spieler_id: string }[] = [];
+  for (const z of (stamm ?? []) as any[]) {
+    if (!aktiv.has(z.spieler_id)) continue;
+    const s = z.spieler ?? {};
+    if (
+      wegFuer({
+        email: s.email,
+        telegram_chat_id: s.telegram_chat_id,
+        kanal: s.kanal,
+        keineMails: keineMailsGewuenscht(s.praeferenzen),
+      }) === "keiner"
+    )
+      continue;
+    out.push({ spieler_id: z.spieler_id });
+  }
+  return out;
+}
+
+// Abfrage an ALLE erreichbaren, aktiven Stammspieler einer Mannschaft
+// (je Spieler per Telegram oder E-Mail).
 export async function sendeAbfrageFuerSpiel(
   admin: SupabaseClient,
   bot: Bot,
@@ -311,12 +373,12 @@ export async function sendeAbfrageFuerSpiel(
 ): Promise<number> {
   const spiel = await ladeSpiel(admin, spielId);
   if (!spiel) return 0;
-  const spieler = await gekoppelteSpieler(admin, spiel);
+  const spieler = await erreichbareSpieler(admin, spiel);
   let n = 0;
   for (const s of spieler) {
     try {
-      await sendeFrage(admin, bot, s.chat_id, s.spieler_id, spiel);
-      n++;
+      const res = await sendeAbfrageAnSpieler(admin, bot, spielId, s.spieler_id);
+      if (res.ok) n++;
     } catch {
       // einzelne Fehlschläge (z. B. Bot blockiert) überspringen
     }

@@ -28,8 +28,17 @@ export async function getSession(): Promise<SessionInfo | null> {
     .eq("id", user.id)
     .maybeSingle();
   const rollen: string[] = (profil?.rollen as string[] | null) ?? [];
-  const spielerId = (profil?.spieler_id as string | null) ?? null;
+  let spielerId = (profil?.spieler_id as string | null) ?? null;
   const isOwner = (profil?.ist_owner as boolean | null) ?? false;
+
+  // Selbstheilung: Ist das Konto (noch) keinem Spieler zugeordnet, versuchen wir
+  // die Verknüpfung erneut über die E-Mail. Das fängt den Fall ab, dass die
+  // E-Mail beim Spieler erst NACH der Registrierung korrigiert wurde — der
+  // Verknüpfungs-Trigger feuert nur einmal bei der Kontoerstellung.
+  if (!spielerId) {
+    const { data: linked } = await supabase.rpc("link_my_spieler");
+    if (linked) spielerId = linked as string;
+  }
 
   // MF-Zugehörigkeit wird aus der Mannschaft abgeleitet (Führer/Stellvertreter)
   let mfTeams: string[] = [];

@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getAdmin } from "@/lib/supabase/admin";
 import { getBot, ensureInit } from "@/lib/telegram/bot";
-import { ladeSpiel, gekoppelteSpieler, sendeAbfrageAnSpieler } from "@/lib/telegram/abfrage";
+import { ladeSpiel, erreichbareSpieler, sendeAbfrageAnSpieler } from "@/lib/telegram/abfrage";
+import {
+  ladeKontakt,
+  wegFuerKontakt,
+  sendeInfoMail,
+  type Kontakt,
+} from "@/lib/benachrichtigung";
 import { ladeStammIds } from "@/lib/kader";
 
 export const dynamic = "force-dynamic";
@@ -16,33 +22,50 @@ function fmtDatum(iso: string): string {
   });
 }
 
-// Chat-IDs aller Spieler, die für dieses Spiel schon involviert sind
-// (angefragt/zugesagt/…), zur Benachrichtigung.
-async function betroffeneChats(
+// Alle Spieler, die für dieses Spiel schon involviert sind (angefragt/zugesagt/…)
+// — je nach eingestelltem Kanal per Telegram oder E-Mail benachrichtigen.
+async function betroffeneKontakte(
   admin: ReturnType<typeof getAdmin>,
   spielId: string
-): Promise<number[]> {
+): Promise<Kontakt[]> {
   const { data } = await admin
     .from("verfuegbarkeiten")
-    .select("status, spieler:spieler_id(telegram_chat_id)")
+    .select("spieler_id, status")
     .eq("spiel_id", spielId)
     .neq("status", "nicht_angefragt");
-  const set = new Set<number>();
-  for (const v of data ?? []) {
-    const chat = (v as any).spieler?.telegram_chat_id;
-    if (chat) set.add(Number(chat));
+  const out: Kontakt[] = [];
+  for (const v of (data ?? []) as any[]) {
+    const k = await ladeKontakt(admin, v.spieler_id);
+    if (k) out.push(k);
   }
-  return Array.from(set);
+  return out;
 }
 
-async function sendeInfo(bot: any, chats: number[], text: string): Promise<void> {
-  for (const chat of chats) {
+// text = Telegram-Fassung (Markdown), klartext = für die E-Mail
+async function sendeInfo(
+  admin: ReturnType<typeof getAdmin>,
+  bot: any,
+  kontakte: Kontakt[],
+  text: string,
+  betreff: string,
+  klartext: string[],
+  spielId: string
+): Promise<number> {
+  let n = 0;
+  for (const k of kontakte) {
+    const weg = wegFuerKontakt(k);
     try {
-      await bot.api.sendMessage(chat, text, { parse_mode: "Markdown" });
+      if (weg === "telegram" && k.chatId) {
+        await bot.api.sendMessage(k.chatId, text, { parse_mode: "Markdown" });
+        n++;
+      } else if (weg === "email") {
+        if (await sendeInfoMail(admin, k, betreff, klartext, spielId)) n++;
+      }
     } catch {
       // einzelne Fehler nicht weiterreichen
     }
   }
+  return n;
 }
 
 export async function POST(req: Request): Promise<Response> {
@@ -110,15 +133,25 @@ export async function POST(req: Request): Promise<Response> {
 
     if (!datumGeaendert) {
       // Nur Uhrzeit geändert → Zusagen bleiben, nur informieren
-      const chats = await betroffeneChats(admin, spiel_id);
-      await sendeInfo(
+      const kontakte = await betroffeneKontakte(admin, spiel_id);
+      const zeitTxt = (neueUhrzeit ?? "").slice(0, 5);
+      const informiert = await sendeInfo(
+        admin,
         bot,
-        chats,
+        kontakte,
         `🕒 *Uhrzeit geändert* — ${teamName} gegen ${gegner} am ${fmtDatum(
           neuesDatum
-        )} beginnt jetzt um *${(neueUhrzeit ?? "").slice(0, 5)} Uhr*.`
+        )} beginnt jetzt um *${zeitTxt} Uhr*.`,
+        `Uhrzeit geändert: ${teamName} gegen ${gegner}`,
+        [
+          `<strong>Uhrzeit geändert</strong>`,
+          `${teamName} gegen ${gegner} am ${fmtDatum(
+            neuesDatum
+          )} beginnt jetzt um <strong>${zeitTxt} Uhr</strong>.`,
+        ],
+        spiel_id
       );
-      return NextResponse.json({ ok: true, neuAbgefragt: 0, informiert: chats.length });
+      return NextResponse.json({ ok: true, neuAbgefragt: 0, informiert });
     }
 
     // Echter Terminwechsel → Zusagen zurücksetzen und neu abfragen
@@ -152,7 +185,7 @@ export async function POST(req: Request): Promise<Response> {
     const info = await ladeSpiel(admin, spiel_id);
     let neuAbgefragt = 0;
     if (info) {
-      const empfaenger = await gekoppelteSpieler(admin, info);
+      const empfaenger = await erreichbareSpieler(admin, info);
       for (const e of empfaenger) {
         if (abgesagt.has(e.spieler_id)) continue;
         const res = await sendeAbfrageAnSpieler(admin, bot, spiel_id, e.spieler_id);
@@ -182,17 +215,27 @@ export async function POST(req: Request): Promise<Response> {
       entitaet_id: spiel_id,
       details: { heim: neuHeim, ort: neuOrt, durch: session.userId },
     });
-    const chats = await betroffeneChats(admin, spiel_id);
-    await sendeInfo(
+    const kontakte = await betroffeneKontakte(admin, spiel_id);
+    const artTxt = neuHeim ? "Heimspiel" : "Auswärtsspiel";
+    const informiert = await sendeInfo(
+      admin,
       bot,
-      chats,
+      kontakte,
       `🔁 *Heimrecht geändert* — ${teamName} gegen ${gegner} am ${fmtDatum(
         (spiel as any).datum
-      )} ist jetzt ein *${neuHeim ? "Heimspiel" : "Auswärtsspiel"}*${
-        neuOrt ? ` (Ort: ${neuOrt})` : ""
-      }.`
+      )} ist jetzt ein *${artTxt}*${neuOrt ? ` (Ort: ${neuOrt})` : ""}.`,
+      `Heimrecht geändert: ${teamName} gegen ${gegner}`,
+      [
+        `<strong>Heimrecht geändert</strong>`,
+        `${teamName} gegen ${gegner} am ${fmtDatum(
+          (spiel as any).datum
+        )} ist jetzt ein <strong>${artTxt}</strong>${
+          neuOrt ? ` — Ort: ${neuOrt}` : ""
+        }.`,
+      ],
+      spiel_id
     );
-    return NextResponse.json({ ok: true, informiert: chats.length });
+    return NextResponse.json({ ok: true, informiert });
   }
 
   // ── Absetzen / Ausfall ───────────────────────────────────────────────────
@@ -211,15 +254,24 @@ export async function POST(req: Request): Promise<Response> {
       entitaet_id: spiel_id,
       details: { datum: (spiel as any).datum, durch: session.userId },
     });
-    const chats = await betroffeneChats(admin, spiel_id);
-    await sendeInfo(
+    const kontakte = await betroffeneKontakte(admin, spiel_id);
+    const informiert = await sendeInfo(
+      admin,
       bot,
-      chats,
+      kontakte,
       `⚠️ *Spiel fällt aus* — ${teamName} gegen ${gegner} am ${fmtDatum(
         (spiel as any).datum
-      )} wurde abgesetzt. Du musst nicht antreten.`
+      )} wurde abgesetzt. Du musst nicht antreten.`,
+      `Spiel fällt aus: ${teamName} gegen ${gegner}`,
+      [
+        `<strong>Spiel fällt aus</strong>`,
+        `${teamName} gegen ${gegner} am ${fmtDatum(
+          (spiel as any).datum
+        )} wurde abgesetzt. Du musst nicht antreten.`,
+      ],
+      spiel_id
     );
-    return NextResponse.json({ ok: true, informiert: chats.length });
+    return NextResponse.json({ ok: true, informiert });
   }
 
   return NextResponse.json({ error: "Unbekannter Typ" }, { status: 400 });

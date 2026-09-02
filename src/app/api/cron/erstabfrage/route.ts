@@ -3,7 +3,7 @@ import { getAdmin } from "@/lib/supabase/admin";
 import { getBot, ensureInit } from "@/lib/telegram/bot";
 import {
   ladeSpiel,
-  gekoppelteSpieler,
+  erreichbareSpieler,
   sendeAbfrageAnSpieler,
 } from "@/lib/telegram/abfrage";
 import { cronErlaubt, heuteBerlin, plusTage } from "@/lib/cron";
@@ -56,7 +56,7 @@ export async function GET(req: Request): Promise<Response> {
 
     const info = await ladeSpiel(admin, (spiel as any).id);
     if (!info) continue;
-    const empfaenger = await gekoppelteSpieler(admin, info);
+    const empfaenger = await erreichbareSpieler(admin, info);
     if (empfaenger.length === 0) continue;
 
     // Nur Spieler ohne bisherige Abfrage/Antwort anschreiben
