@@ -79,13 +79,21 @@ export async function ladeKandidaten(
     .in("status", ["freigegeben", "gesendet"]);
   const lockAktiv = (locks ?? []).map((l: any) => l.spieler_id);
 
-  // Abwesenheiten, die diesen Tag abdecken -> nicht verfügbar
+  // Abwesenheiten, die diesen Tag abdecken -> sichtbar, aber gesperrt.
+  // Wir merken uns das Enddatum, damit auch ein fremder MF "Abwesend bis TT.MM."
+  // sieht, statt dass der Spieler kommentarlos aus der Liste verschwindet.
   const { data: abw } = await supabase
     .from("abwesenheiten")
-    .select("spieler_id")
+    .select("spieler_id, bis")
     .lte("von", datum)
     .gte("bis", datum);
-  const nichtVerfuegbar = (abw ?? []).map((a: any) => a.spieler_id);
+  const abwesend: Record<string, string> = {};
+  for (const a of abw ?? []) {
+    const id = (a as any).spieler_id;
+    const bis = (a as any).bis as string;
+    // frühestes Enddatum behalten, falls mehrere Abwesenheiten überlappen
+    if (!abwesend[id] || bis < abwesend[id]) abwesend[id] = bis;
+  }
 
   // Ersatzeinsätze diese Halbserie (nur Zähler/Info)
   const { data: eins } = await supabase
@@ -124,7 +132,7 @@ export async function ladeKandidaten(
     zugesagtAmTag,
     spieltAmTagNummern,
     lockAktiv,
-    nichtVerfuegbar,
+    abwesend,
     einsaetze,
     config,
   });

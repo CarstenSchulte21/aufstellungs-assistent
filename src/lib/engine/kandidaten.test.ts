@@ -87,6 +87,22 @@ describe("ermittleKandidaten – harte Filter", () => {
     expect(r[0].warnungen.some((w) => w.includes("selben Tag"))).toBe(true);
   });
 
+  it("zeigt abwesende Spieler an, aber gesperrt und mit Enddatum-Hinweis", () => {
+    const r = ermittleKandidaten(
+      ctx([sp({ id: "urlaub", teamNummer: 2 }), sp({ id: "frei", teamNummer: 2 })], {
+        abwesend: { urlaub: "2026-09-19" },
+      })
+    );
+    expect(r.map((k) => k.id).sort()).toEqual(["frei", "urlaub"]);
+    const u = r.find((k) => k.id === "urlaub")!;
+    expect(u.locked).toBe(true);
+    expect(u.abwesend).toBe(true);
+    expect(u.warnungen.some((w) => w.includes("Abwesend") && w.includes("19.09."))).toBe(
+      true
+    );
+    expect(r.find((k) => k.id === "frei")!.locked).toBe(false);
+  });
+
   it("schließt Tabu-Spieler aus", () => {
     const r = ermittleKandidaten(
       ctx([sp({ id: "tabu", teamNummer: 2 }), sp({ id: "frei", teamNummer: 2 })], {

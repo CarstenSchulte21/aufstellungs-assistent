@@ -47,7 +47,8 @@ export type EngineKontext = {
   zugesagtAmTag?: string[]; // hat am selben Tag schon irgendwo zugesagt -> gesperrt
   spieltAmTagNummern?: number[]; // Mannschaftsnummern mit Spiel am selben Tag (weiche Warnung)
   lockAktiv?: string[]; // offene Ersatzanfrage am selben Tag (andere Mannschaft)
-  nichtVerfuegbar?: string[]; // abgesagt/abwesend für dieses Spiel
+  nichtVerfuegbar?: string[]; // hart ausgeschlossen (z. B. Absage für dieses Spiel)
+  abwesend?: Record<string, string>; // im Urlaub o. Ä.: id -> bis-Datum (ISO), sichtbar aber gesperrt
   einsaetze?: Record<string, number>; // Ersatzeinsätze diese Halbserie
   config?: EngineConfig;
 };
@@ -62,12 +63,22 @@ export type Kandidat = {
   warnungen: string[];
   locked: boolean; // offener Lock -> nur informativ, nicht freigebbar
   favorit?: boolean; // im Kader dieser Mannschaft als Favorit hinterlegt
+  abwesend?: boolean; // im Urlaub o. Ä. -> sichtbar, aber nicht anfragbar
 };
 
 const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
 export function wochentag(iso: string): string {
   return WOCHENTAGE[new Date(iso + "T00:00:00").getDay()];
+}
+
+// Kurzformat TT.MM. für Abwesenheits-Hinweise
+function tagMonat(iso: string): string {
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  return `${String(d.getDate()).padStart(2, "0")}.${String(
+    d.getMonth() + 1
+  ).padStart(2, "0")}.`;
 }
 
 /**
@@ -79,6 +90,7 @@ export function ermittleKandidaten(ctx: EngineKontext): Kandidat[] {
   const spieltNummern = new Set(ctx.spieltAmTagNummern ?? []);
   const lock = new Set(ctx.lockAktiv ?? []);
   const nv = new Set(ctx.nichtVerfuegbar ?? []);
+  const abwesend = ctx.abwesend ?? {};
   const tabu = new Set(ctx.config?.tabu_spieler ?? []);
   const einsaetze = ctx.einsaetze ?? {};
   const max = ctx.config?.max_ersatzeinsaetze_pro_spieler;
@@ -96,6 +108,13 @@ export function ermittleKandidaten(ctx: EngineKontext): Kandidat[] {
   const kandidaten: Kandidat[] = gefiltert.map((s) => {
     const warnungen: string[] = [];
     const p = s.praeferenzen ?? {};
+    // Abwesend (Urlaub o. Ä.): sichtbar, damit auch ein fremder MF weiß, warum
+    // dieser Kandidat ausfällt — aber gesperrt (nicht anfragbar).
+    const istAbwesend = s.id in abwesend;
+    if (istAbwesend) {
+      const bis = tagMonat(abwesend[s.id] ?? "");
+      warnungen.push(bis ? `Abwesend (bis ${bis})` : "Abwesend");
+    }
     // Tages-Konflikt: schon zugesagt -> gesperrt; eigene Mannschaft spielt,
     // aber noch keine Zusage -> nur Hinweis (anfragbar).
     if (zugesagt.has(s.id))
@@ -131,7 +150,8 @@ export function ermittleKandidaten(ctx: EngineKontext): Kandidat[] {
       qttr: s.qttr,
       einsaetze: n,
       warnungen,
-      locked: lock.has(s.id) || zugesagt.has(s.id),
+      locked: lock.has(s.id) || zugesagt.has(s.id) || istAbwesend,
+      abwesend: istAbwesend,
     };
   });
 

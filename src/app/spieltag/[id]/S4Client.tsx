@@ -412,6 +412,11 @@ export default function S4Client({
                               Favorit
                             </span>
                           )}
+                          {c.abwesend && (
+                            <span className="ml-2 rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700">
+                              Abwesend
+                            </span>
+                          )}
                         </div>
                         <div className="text-[12px] text-slate-500">
                           {c.teamNummer}. Mannschaft · Pos. {c.position} · QTTR{" "}
@@ -422,10 +427,15 @@ export default function S4Client({
                             ⚠ {w}
                           </div>
                         ))}
-                        {c.locked && !asked && (
+                        {c.locked && !asked && !c.abwesend && (
                           <div className="mt-0.5 text-[12px] font-medium text-slate-500">
                             🔒 Aktuell nicht anfragbar (bereits von einer anderen
                             Mannschaft angefragt oder für diesen Tag zugesagt)
+                          </div>
+                        )}
+                        {c.abwesend && !asked && (
+                          <div className="mt-0.5 text-[12px] font-medium text-slate-500">
+                            🔒 Nicht anfragbar — im angegebenen Zeitraum abwesend
                           </div>
                         )}
                       </div>
