@@ -80,6 +80,14 @@ export default async function SpieltageUebersicht() {
       teamName: s.mannschaften?.name ?? "—",
       teamNummer: s.mannschaften?.nummer ?? 99,
     }));
+    // Innerhalb einer KW: erst nach Tag, bei gleichem Tag nach Mannschaft
+    // (1. Mannschaft zuerst), zuletzt nach Uhrzeit.
+    spiele.sort(
+      (a, b) =>
+        a.datum.localeCompare(b.datum) ||
+        a.teamNummer - b.teamNummer ||
+        (a.uhrzeit ?? "").localeCompare(b.uhrzeit ?? "")
+    );
   }
 
   // Nach KW gruppieren (Reihenfolge bleibt chronologisch durch die Sortierung)

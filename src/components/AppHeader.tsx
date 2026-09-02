@@ -85,6 +85,21 @@ export default function AppHeader({
           </div>
         </a>
 
+        {/* Schnellzugriff — prominent in der Hauptnavigation */}
+        {(spielerModus || !hatManagement) && (
+          <a href="/meine-spieltage" className={bar}>
+            Spieltagsplanung
+            {spielerCount > 0 && (
+              <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
+                {spielerCount}
+              </span>
+            )}
+          </a>
+        )}
+        <a href="/spieltage" className={bar}>
+          Alle Spieltage
+        </a>
+
         {hatManagement && (
           <label className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-[11px] text-blue-50">
             Modus:
@@ -98,18 +113,6 @@ export default function AppHeader({
               <option value="spieler">Spieler</option>
             </select>
           </label>
-        )}
-
-        {/* Schnellzugriff — Spieltagsplanung ist eine Spieler-Ansicht */}
-        {(spielerModus || !hatManagement) && (
-          <a href="/meine-spieltage" className={bar}>
-            Spieltagsplanung
-            {spielerCount > 0 && (
-              <span className="ml-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold text-primary-dark">
-                {spielerCount}
-              </span>
-            )}
-          </a>
         )}
 
         <button onClick={() => setOpen((o) => !o)} className={bar}>
@@ -157,9 +160,6 @@ export default function AppHeader({
             )}
 
             <div className="my-1 border-t border-slate-100" />
-            <a href="/spieltage" className={item}>
-              Alle Spieltage (Kalender)
-            </a>
             <a href="/konto" className={item}>
               Passwort ändern
             </a>
