@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { TeamRow } from "@/lib/matrix";
 
@@ -8,11 +9,13 @@ export default function TeamSlider({
   selectedTeamId,
   ownTeamId,
   onWechsel,
+  rechts,
 }: {
   teams: TeamRow[]; // aufsteigend nach Nummer (1 = höchste)
   selectedTeamId: string;
   ownTeamId: string | null;
   onWechsel?: (id: string) => void;
+  rechts?: ReactNode; // optionaler Slot ganz rechts (z. B. Kalender-Button)
 }) {
   const router = useRouter();
   const wechsle = (id: string) =>
@@ -62,6 +65,8 @@ export default function TeamSlider({
       >
         ›
       </button>
+
+      {rechts}
     </div>
   );
 }
