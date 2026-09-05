@@ -30,6 +30,8 @@ export type Day = {
   heim: boolean;
   gegner: string;
   status: string;
+  verlegtVon: string | null; // ursprüngliches Datum, falls verlegt
+  inKlaerung: boolean; // Verlegung wird gerade verhandelt
 };
 
 export type Cell = {
@@ -175,11 +177,23 @@ export async function loadMatrix(
   // Spieltage
   const { data: spiele } = await supabase
     .from("spiele")
-    .select("id, spieltag_nr, datum, uhrzeit, heim, gegner, status")
+    .select(
+      "id, spieltag_nr, datum, uhrzeit, heim, gegner, status, verlegt_von, verlegung_in_klaerung"
+    )
     .eq("mannschaft_id", teamId)
     .eq("halbserie_id", halbserieId)
     .order("datum", { ascending: true });
-  const days = (spiele ?? []) as Day[];
+  const days: Day[] = (spiele ?? []).map((s: any) => ({
+    id: s.id,
+    spieltag_nr: s.spieltag_nr,
+    datum: s.datum,
+    uhrzeit: s.uhrzeit ?? null,
+    heim: s.heim,
+    gegner: s.gegner,
+    status: s.status,
+    verlegtVon: s.verlegt_von ?? null,
+    inKlaerung: Boolean(s.verlegung_in_klaerung),
+  }));
 
   // Verfügbarkeiten (über die maskierte View)
   const cells: Record<string, Cell> = {};

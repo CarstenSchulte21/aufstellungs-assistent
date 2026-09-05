@@ -26,6 +26,32 @@ function fmtDatum(iso: string) {
   });
 }
 
+// Dezente Kennzeichnung im Tageskopf: verlegt (mit ursprünglichem Datum) bzw.
+// gerade in Verlegungs-Klärung.
+function VerlegtMarker({ d }: { d: Day }) {
+  if (!d.verlegtVon && !d.inKlaerung) return null;
+  return (
+    <div className="mt-0.5 flex flex-wrap gap-1">
+      {d.verlegtVon && (
+        <span
+          title={`Verlegt · ursprünglich ${fmtDatum(d.verlegtVon)}`}
+          className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-semibold leading-none text-amber-700"
+        >
+          ↻ verlegt
+        </span>
+      )}
+      {d.inKlaerung && (
+        <span
+          title="Verlegung wird gerade verhandelt — Termin noch offen"
+          className="rounded bg-sky-100 px-1 py-0.5 text-[9px] font-semibold leading-none text-sky-700"
+        >
+          ⏳ in Klärung
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function MatrixTabelle({
   teams,
   matrix,
@@ -169,6 +195,7 @@ export default function MatrixTabelle({
                           {fmtDatum(d.datum)}
                           {d.uhrzeit ? ` · ${d.uhrzeit.slice(0, 5)}` : ""}
                         </div>
+                        <VerlegtMarker d={d} />
                         <div className="max-w-[92px] truncate text-[10px] text-slate-500">
                           {d.heim ? "H" : "A"} · {d.gegner}
                         </div>
@@ -326,6 +353,7 @@ export default function MatrixTabelle({
                       <div className="text-[13px] text-slate-500">
                         {d.heim ? "Heim" : "Auswärts"} gegen {d.gegner}
                       </div>
+                      <VerlegtMarker d={d} />
                     </div>
                     <span
                       className={`whitespace-nowrap rounded-lg px-2 py-0.5 text-[13px] font-bold ${

@@ -10,6 +10,7 @@ export type BearbeitenData = {
   ort: string;
   status: string;
   verlegtVon: string | null;
+  inKlaerung: boolean;
 };
 
 export default function SpielAendern({
@@ -70,6 +71,11 @@ export default function SpielAendern({
             verlegt (ursprgl. {data.verlegtVon})
           </span>
         )}
+        {data.inKlaerung && (
+          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[11px] font-semibold text-sky-700">
+            Verlegung in Klärung
+          </span>
+        )}
         {data.status === "abgesetzt" && (
           <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700">
             abgesetzt
@@ -85,6 +91,35 @@ export default function SpielAendern({
 
       {offen && (
         <div className="mt-3 space-y-4">
+          {/* Verlegung in Klärung (Marker) */}
+          <div className="rounded-lg border border-sky-100 bg-sky-50/40 p-3">
+            <div className="mb-1 text-[13px] font-semibold text-sky-800">
+              Verlegung in Klärung
+            </div>
+            <p className="mb-2 text-[11px] text-slate-500">
+              Markiere den Spieltag, solange eine Verlegung noch verhandelt wird.
+              Der Termin bleibt bestehen und wird normal abgefragt — bereits
+              zugesagte Spieler werden beim Markieren kurz vorgewarnt.
+            </p>
+            {data.inKlaerung ? (
+              <button
+                onClick={() => ruf("klaerung", { an: false })}
+                disabled={busy === "klaerung"}
+                className="rounded-lg border border-sky-300 bg-white px-3 py-1.5 text-sm font-semibold text-sky-700 hover:bg-sky-50 disabled:opacity-50"
+              >
+                {busy === "klaerung" ? "…" : "Klärung beenden (Termin bleibt)"}
+              </button>
+            ) : (
+              <button
+                onClick={() => ruf("klaerung", { an: true })}
+                disabled={busy === "klaerung"}
+                className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
+              >
+                {busy === "klaerung" ? "…" : "Als „in Klärung“ markieren"}
+              </button>
+            )}
+          </div>
+
           {/* Verlegen */}
           <div className="rounded-lg border border-slate-100 p-3">
             <div className="mb-2 text-[13px] font-semibold text-slate-700">

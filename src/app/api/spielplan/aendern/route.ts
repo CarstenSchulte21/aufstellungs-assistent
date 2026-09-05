@@ -75,9 +75,12 @@ export async function POST(req: Request): Promise<Response> {
   const body = await req.json().catch(() => ({}));
   const { spiel_id, typ } = body as {
     spiel_id?: string;
-    typ?: "verlegen" | "heimrecht" | "absetzen";
+    typ?: "verlegen" | "heimrecht" | "absetzen" | "klaerung";
   };
-  if (!spiel_id || !["verlegen", "heimrecht", "absetzen"].includes(typ ?? ""))
+  if (
+    !spiel_id ||
+    !["verlegen", "heimrecht", "absetzen", "klaerung"].includes(typ ?? "")
+  )
     return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
 
   const admin = getAdmin();
@@ -100,6 +103,63 @@ export async function POST(req: Request): Promise<Response> {
   const bot = getBot();
   await ensureInit(bot);
 
+  // ── Verlegung in Klärung (Marker an/aus) ─────────────────────────────────
+  // Rein informativ: Der Termin bleibt bestehen, die Abfrage läuft weiter.
+  // Beim Setzen werden bereits zugesagte Spieler kurz vorgewarnt.
+  if (typ === "klaerung") {
+    const an: boolean = body.an !== false; // Standard: einschalten
+    await admin
+      .from("spiele")
+      .update({
+        verlegung_in_klaerung: an,
+        zuletzt_geaendert_am: new Date().toISOString(),
+      })
+      .eq("id", spiel_id);
+
+    await admin.from("audit_log").insert({
+      benutzer_id: session.userId,
+      aktion: an ? "verlegung_klaerung_an" : "verlegung_klaerung_aus",
+      entitaet: "spiele",
+      entitaet_id: spiel_id,
+      details: { durch: session.userId },
+    });
+
+    let informiert = 0;
+    if (an) {
+      // Nur bereits ZUGESAGTE Spieler vorwarnen
+      const { data: zusagen } = await admin
+        .from("verfuegbarkeiten")
+        .select("spieler_id")
+        .eq("spiel_id", spiel_id)
+        .eq("status", "zugesagt");
+      const kontakte: Kontakt[] = [];
+      for (const v of (zusagen ?? []) as any[]) {
+        const k = await ladeKontakt(admin, v.spieler_id);
+        if (k) kontakte.push(k);
+      }
+      if (kontakte.length > 0) {
+        informiert = await sendeInfo(
+          admin,
+          bot,
+          kontakte,
+          `🕓 *Termin evtl. in Verlegung* — ${teamName} gegen ${gegner} am ${fmtDatum(
+            (spiel as any).datum
+          )} steht gerade zur Verlegung in Klärung. Noch ist nichts entschieden — der Termin kann auch bleiben. Wir melden uns, sobald es feststeht.`,
+          `Termin evtl. in Verlegung: ${teamName} gegen ${gegner}`,
+          [
+            `<strong>Termin evtl. in Verlegung</strong>`,
+            `${teamName} gegen ${gegner} am ${fmtDatum(
+              (spiel as any).datum
+            )} steht gerade zur Verlegung in Klärung.`,
+            `Noch ist nichts entschieden — der Termin kann auch bleiben. Wir melden uns, sobald es feststeht.`,
+          ],
+          spiel_id
+        );
+      }
+    }
+    return NextResponse.json({ ok: true, klaerung: an, informiert });
+  }
+
   // ── Verlegen ─────────────────────────────────────────────────────────────
   if (typ === "verlegen") {
     const neuesDatum: string = body.datum || (spiel as any).datum;
@@ -116,6 +176,7 @@ export async function POST(req: Request): Promise<Response> {
         verlegt_von: datumGeaendert ? (spiel as any).datum : (spiel as any).verlegt_von,
         zuletzt_geaendert_am: new Date().toISOString(),
         zuletzt_geaendert_art: datumGeaendert ? "verlegt" : "uhrzeit",
+        verlegung_in_klaerung: false, // Klärung ist mit der Verlegung erledigt
       })
       .eq("id", spiel_id);
 
@@ -246,6 +307,7 @@ export async function POST(req: Request): Promise<Response> {
         status: "abgesetzt",
         zuletzt_geaendert_am: new Date().toISOString(),
         zuletzt_geaendert_art: "abgesetzt",
+        verlegung_in_klaerung: false,
       })
       .eq("id", spiel_id);
     await admin.from("audit_log").insert({

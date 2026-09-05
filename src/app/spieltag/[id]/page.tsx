@@ -19,7 +19,7 @@ export default async function SpieltagPage({
   const { data: spiel } = await supabase
     .from("spiele")
     .select(
-      "id, spieltag_nr, datum, uhrzeit, ort, heim, gegner, status, verlegt_von, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name, nummer, spielstaerke)"
+      "id, spieltag_nr, datum, uhrzeit, ort, heim, gegner, status, verlegt_von, verlegung_in_klaerung, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(name, nummer, spielstaerke)"
     )
     .eq("id", params.id)
     .maybeSingle();
@@ -221,6 +221,7 @@ export default async function SpieltagPage({
         ort: (spiel as any).ort ?? "",
         status: (spiel as any).status ?? "geplant",
         verlegtVon: (spiel as any).verlegt_von ?? null,
+        inKlaerung: Boolean((spiel as any).verlegung_in_klaerung),
       }}
     />
   );
