@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import SeitenTracker from "./SeitenTracker";
 
 export const metadata: Metadata = {
   title: "Aufstellungs-Assistent",
@@ -18,7 +19,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body>{children}</body>
+      <body>
+        {children}
+        <SeitenTracker />
+      </body>
     </html>
   );
 }

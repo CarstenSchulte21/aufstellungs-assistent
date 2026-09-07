@@ -54,6 +54,18 @@ export default async function AdminPage() {
               Mannschaftsführer und Stellvertreter je Mannschaft festlegen.
             </p>
           </a>
+          <a
+            href="/admin/statistik"
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary"
+          >
+            <div className="text-base font-bold text-slate-900">
+              📊 Statistik
+            </div>
+            <p className="mt-1 text-sm text-slate-500">
+              Adoption, Anmelde-Aktivität und (anonyme) Seitennutzung im
+              Überblick.
+            </p>
+          </a>
           {session.isOwner && (
             <a
               href="/admin/admins"
