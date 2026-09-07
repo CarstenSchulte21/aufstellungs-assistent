@@ -1,21 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Neuigkeit } from "@/lib/neuigkeiten";
 
+const MERKER = "neuigkeiten_gelesen_bis";
+
 // „Was ist neu"-Karte auf der Startseite. Zeigt nur ungelesene, rollen-
-// relevante Neuigkeiten. „Alles gelesen" merkt den Zeitpunkt pro Konto.
+// relevante Neuigkeiten. „Alles gelesen" merkt den Stand serverseitig (pro
+// Konto) UND lokal im Browser — Letzteres greift sofort und unabhängig davon,
+// ob die serverseitige Speicherung schon eingerichtet ist.
 export default function NeuigkeitenKarte({ items }: { items: Neuigkeit[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [weg, setWeg] = useState(false);
 
+  // Neuestes Datum der aktuell offenen Einträge
+  const maxDatum = items.reduce((m, n) => (n.datum > m ? n.datum : m), "");
+
+  // Wurde bereits mindestens bis zu diesem Stand bestätigt? Dann ausblenden.
+  useEffect(() => {
+    try {
+      const bis = localStorage.getItem(MERKER);
+      if (bis && maxDatum && bis >= maxDatum) setWeg(true);
+    } catch {
+      /* localStorage evtl. nicht verfügbar */
+    }
+  }, [maxDatum]);
+
   if (weg || items.length === 0) return null;
 
   async function gelesen() {
     setBusy(true);
+    try {
+      localStorage.setItem(MERKER, maxDatum);
+    } catch {
+      /* ignorieren */
+    }
     const supabase = createClient();
     await supabase.rpc("mark_neuigkeiten_gesehen");
     setBusy(false);
