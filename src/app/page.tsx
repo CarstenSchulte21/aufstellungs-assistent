@@ -8,6 +8,8 @@ import { loadTeams, loadMatrix } from "@/lib/matrix";
 import { ladeStammTeamId } from "@/lib/kader";
 import AppHeader from "@/components/AppHeader";
 import TeamMatrixBereich from "./TeamMatrixBereich";
+import NeuigkeitenKarte from "./NeuigkeitenKarte";
+import { ungelesene, rollenVon } from "@/lib/neuigkeiten";
 import {
   InboxAufgaben,
   SpielerAufgabenListe,
@@ -42,10 +44,16 @@ export default async function Uebersicht({
   // Onboarding-Gate
   const { data: prof } = await supabase
     .from("benutzer")
-    .select("onboarding_gesehen")
+    .select("onboarding_gesehen, neuigkeiten_gesehen_am")
     .eq("id", session.userId)
     .maybeSingle();
   if (prof && prof.onboarding_gesehen === false) redirect("/willkommen");
+
+  // Ungelesene, rollenrelevante Neuigkeiten für die „Was ist neu"-Karte
+  const neueItems = ungelesene(
+    rollenVon({ realIsMf: session.realIsMf, realIsAdmin: session.realIsAdmin }),
+    (prof as any)?.neuigkeiten_gesehen_am ?? null
+  );
 
   // Aufgaben je nach aktivem Modus
   const management = session.isAdmin || session.isMf;
@@ -106,6 +114,7 @@ export default async function Uebersicht({
         spielerCount={spielerCount}
       />
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-5">
+        <NeuigkeitenKarte items={neueItems} />
         {selectedTeamId ? (
           <TeamMatrixBereich
             teams={alle}

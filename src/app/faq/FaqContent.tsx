@@ -60,9 +60,17 @@ export default function FaqContent() {
         </Q>
         <Q frage="Wie melde ich mich an?">
           <p>
-            Über die Web-App-Adresse: E-Mail eingeben, du bekommst einen
-            Anmelde-Link per Mail, draufklicken — fertig, ganz ohne Passwort.
-            Beim ersten Mal bestätigst du die Datenschutz-Einwilligung.
+            Über die Web-App-Adresse mit deiner E-Mail und einem Passwort. Beim
+            ersten Mal legst du dir über den Reiter für neue Konten ein Passwort
+            an (mindestens 6 Zeichen) — nimm dafür die E-Mail, die der Admin bei
+            dir hinterlegt hat. Danach meldest du dich einfach mit E-Mail und
+            Passwort an; beim ersten Login bestätigst du die
+            Datenschutz-Einwilligung.
+          </p>
+          <p>
+            Passwort vergessen? Über Passwort vergessen auf der Anmeldeseite
+            bekommst du einen Link per Mail, mit dem du ein neues setzt. Ändern
+            kannst du es später jederzeit im Menü unter Passwort ändern.
           </p>
         </Q>
         <Q frage="Wie wird mein Profil zugeordnet?">
@@ -79,6 +87,32 @@ export default function FaqContent() {
             Oben rechts im Kopf gibt es einen Modus-Umschalter (Admin,
             Mannschaftsführer, Spieler). Deine eigene Verfügbarkeit pflegst du im
             Spieler-Modus, die Mannschaftsplanung im MF-Modus.
+          </p>
+        </Q>
+        <Q frage="Wo sehe ich alle Spieltage aller Mannschaften?">
+          <p>
+            Oben in der Navigation unter Alle Spieltage: eine kompakte Liste
+            aller Mannschaften, nach Kalenderwoche sortiert (innerhalb einer
+            Woche nach Tag, bei mehreren Spielen am selben Tag mit der 1.
+            Mannschaft zuerst). Ein Klick auf einen Spieltag führt ins Detail.
+          </p>
+        </Q>
+        <Q frage="Kann ich die Spieltage in meinen Kalender übernehmen?">
+          <p>
+            Ja, als Kalenderdatei (.ics). In der Mannschafts-Übersicht lädst du
+            mit dem 📅-Button alle Spieltage der gezeigten Mannschaft. Unter
+            Spieltagsplanung gibt es zusätzlich Meine Spiele als Kalender — das
+            enthält die Spiele deiner Mannschaft und deine Ersatzeinsätze. Die
+            Datei importierst du in deinen Kalender (Google, Apple, Outlook …);
+            Uhrzeit und Halle sind enthalten.
+          </p>
+        </Q>
+        <Q frage="Woran erkenne ich, dass ein Spieltag verlegt wurde?">
+          <p>
+            In der Übersicht trägt ein verschobener Spieltag ein kleines
+            ↻ verlegt-Zeichen; im Tooltip steht das ursprüngliche Datum. Wird
+            gerade noch über eine Verlegung verhandelt, steht ⏳ in Klärung —
+            dann ist der Termin noch offen und kann auch bleiben.
           </p>
         </Q>
       </Abschnitt>
@@ -203,6 +237,26 @@ export default function FaqContent() {
             Heimrecht und Ort tauschen oder das Spiel absetzen. Bei einem echten
             Terminwechsel werden bestehende Zusagen zurückgesetzt und der Stamm
             automatisch neu gefragt; alle Beteiligten werden informiert.
+          </p>
+        </Q>
+        <Q frage="Ein Spieltag könnte verlegt werden — kann ich das kennzeichnen?">
+          <p>
+            Ja. Im Spieltag-Detail unter Spiel bearbeiten gibt es Als in Klärung
+            markieren. Nützlich, wenn eine Verlegung noch verhandelt wird und es
+            dauern kann, bis der neue Termin steht. Der Termin bleibt bestehen
+            und wird normal abgefragt — bereits zugesagte Spieler bekommen aber
+            eine kurze Vorwarnung. Der Marker verschwindet von selbst, sobald du
+            das Spiel tatsächlich verlegst oder absetzt; Klärung beenden hebt ihn
+            ohne Nachricht wieder auf.
+          </p>
+        </Q>
+        <Q frage="Sehe ich, wenn ein Ersatzkandidat im Urlaub ist?">
+          <p>
+            Ja. Ein abwesender Spieler wird in den Ersatzvorschlägen jetzt
+            angezeigt (statt einfach zu fehlen) — rot als Abwesend markiert und
+            mit Hinweis Abwesend (bis TT.MM.). Anfragen kannst du ihn nicht, aber
+            du siehst sofort, warum er ausfällt — auch bei Kandidaten aus anderen
+            Mannschaften.
           </p>
         </Q>
         <Q frage="Was stelle ich unter Regeln ein?">

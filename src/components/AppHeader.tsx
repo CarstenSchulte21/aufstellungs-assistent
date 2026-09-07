@@ -160,6 +160,9 @@ export default function AppHeader({
             )}
 
             <div className="my-1 border-t border-slate-100" />
+            <a href="/neuigkeiten" className={item}>
+              Neuigkeiten
+            </a>
             <a href="/konto" className={item}>
               Passwort ändern
             </a>

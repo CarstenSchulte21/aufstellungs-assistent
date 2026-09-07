@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { MatrixData, TeamRow, RosterPlayer, Day } from "@/lib/matrix";
@@ -24,6 +24,16 @@ function fmtDatum(iso: string) {
     day: "2-digit",
     month: "2-digit",
   });
+}
+
+// Heutiges Datum in Europe/Berlin als "YYYY-MM-DD" (für Vergangenheits-Vergleich)
+function berlinHeute(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 // Dezente Kennzeichnung im Tageskopf: verlegt (mit ursprünglichem Datum) bzw.
@@ -69,6 +79,31 @@ export default function MatrixTabelle({
 }) {
   const router = useRouter();
   const [nurLuecken, setNurLuecken] = useState(false);
+  const [vergangeneAus, setVergangeneAus] = useState(false);
+
+  // Schalterstellung pro Browser merken
+  useEffect(() => {
+    try {
+      setVergangeneAus(localStorage.getItem("matrix_vergangene_aus") === "1");
+    } catch {
+      /* localStorage evtl. nicht verfügbar */
+    }
+  }, []);
+  function toggleVergangene(v: boolean) {
+    setVergangeneAus(v);
+    try {
+      localStorage.setItem("matrix_vergangene_aus", v ? "1" : "0");
+    } catch {
+      /* ignorieren */
+    }
+  }
+
+  const heute = useMemo(() => berlinHeute(), []);
+  const istVorbei = (d: Day) => d.datum < heute;
+
+  // Auto-Scroll (Desktop): beim Öffnen zum nächsten kommenden Spieltag
+  const scrollBox = useRef<HTMLDivElement>(null);
+  const ersterKommendRef = useRef<HTMLTableCellElement>(null);
 
   // Realtime: bei jeder Änderung an Verfügbarkeiten neu laden.
   // (Wird abgeschaltet, wenn ein Eltern-Container das selbst übernimmt.)
@@ -106,13 +141,33 @@ export default function MatrixTabelle({
   };
 
   const sichtbareDays = useMemo(() => {
-    if (!nurLuecken) return days;
-    return days.filter((d) => {
-      const s = dayStats(d);
-      return s.zu < s.need;
-    });
+    let list = days;
+    if (nurLuecken) {
+      list = list.filter((d) => {
+        const s = dayStats(d);
+        return s.zu < s.need;
+      });
+    }
+    if (vergangeneAus) list = list.filter((d) => !istVorbei(d));
+    return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days, nurLuecken, roster, cells, team]);
+  }, [days, nurLuecken, vergangeneAus, roster, cells, team, heute]);
+
+  // Index des ersten kommenden Spieltags (für Trennlinie + Auto-Scroll)
+  const ersterKommendIdx = useMemo(
+    () => sichtbareDays.findIndex((d) => !istVorbei(d)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sichtbareDays, heute]
+  );
+
+  useEffect(() => {
+    const box = scrollBox.current;
+    const th = ersterKommendRef.current;
+    if (!box || !th || ersterKommendIdx <= 0) return;
+    // erste Spalte etwas hinter der klebenden Spieler-Spalte positionieren
+    const ziel = Math.max(0, th.offsetLeft - 170);
+    box.scrollTo({ left: ziel, behavior: "smooth" });
+  }, [ersterKommendIdx, sichtbareDays]);
 
   function switchTeam(id: string) {
     router.push(`${basePath}?team=${id}`);
@@ -159,6 +214,15 @@ export default function MatrixTabelle({
             />
             Nur Lücken zeigen
           </label>
+          <label className="flex items-center gap-2 text-[12px] font-medium text-slate-600">
+            <input
+              type="checkbox"
+              checked={vergangeneAus}
+              onChange={(e) => toggleVergangene(e.target.checked)}
+              className="h-4 w-4"
+            />
+            Vergangene ausblenden
+          </label>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-slate-100 px-4 py-2 text-[11px] text-slate-500">
@@ -176,16 +240,18 @@ export default function MatrixTabelle({
               : "Noch kein Spielplan für diese Mannschaft erfasst."}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div ref={scrollBox} className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
                   <th className="sticky left-0 z-10 bg-white px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                     Spieler
                   </th>
-                  {sichtbareDays.map((d) => {
+                  {sichtbareDays.map((d, i) => {
                     const st = dayStats(d);
                     const ok = st.zu >= st.need;
+                    const vorbei = istVorbei(d);
+                    const divider = i === ersterKommendIdx && ersterKommendIdx > 0;
                     // Spieltag-Detail ist für alle ansehbar; Bearbeiten regelt
                     // die Detailseite (nur Admin/MF der Mannschaft).
                     const kannDetail = true;
@@ -212,7 +278,13 @@ export default function MatrixTabelle({
                       ok ? "border-slate-200 bg-slate-50" : "border-amber-300 bg-amber-50"
                     }`;
                     return (
-                      <th key={d.id} className="px-1.5 py-2 align-bottom">
+                      <th
+                        key={d.id}
+                        ref={divider ? ersterKommendRef : undefined}
+                        className={`px-1.5 py-2 align-bottom ${
+                          vorbei ? "opacity-50" : ""
+                        } ${divider ? "border-l-2 border-primary" : ""}`}
+                      >
                         {kannDetail ? (
                           <a href={`/spieltag/${d.id}`} className={`${boxCls} transition hover:shadow`}>
                             {inhalt}
@@ -269,20 +341,23 @@ export default function MatrixTabelle({
                         </span>
                       )}
                     </td>
-                    {sichtbareDays.map((d) => {
+                    {sichtbareDays.map((d, i) => {
                       const c = cells[`${d.id}:${p.spieler_id}`];
+                      const vorbei = istVorbei(d);
+                      const divider =
+                        i === ersterKommendIdx && ersterKommendIdx > 0;
+                      const tdCls = `px-1.5 py-1.5 text-center ${
+                        vorbei ? "opacity-50" : ""
+                      } ${divider ? "border-l-2 border-primary" : ""}`;
                       if (p.ersatzHerkunft && !c) {
                         return (
-                          <td
-                            key={d.id}
-                            className="px-1.5 py-1.5 text-center text-slate-200"
-                          >
+                          <td key={d.id} className={`${tdCls} text-slate-200`}>
                             ·
                           </td>
                         );
                       }
                       return (
-                        <td key={d.id} className="px-1.5 py-1.5 text-center">
+                        <td key={d.id} className={tdCls}>
                           <Chip status={cellStatus(p, d)} cell={c} datum={d.datum} />
                         </td>
                       );
@@ -306,15 +381,26 @@ export default function MatrixTabelle({
           <h2 className="text-[14px] font-bold text-slate-800">
             {team?.name} · Spieltage
           </h2>
-          <label className="flex items-center gap-1.5 text-[12px] text-slate-600">
-            <input
-              type="checkbox"
-              checked={nurLuecken}
-              onChange={(e) => setNurLuecken(e.target.checked)}
-              className="h-4 w-4"
-            />
-            Nur Lücken
-          </label>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-[12px] text-slate-600">
+              <input
+                type="checkbox"
+                checked={nurLuecken}
+                onChange={(e) => setNurLuecken(e.target.checked)}
+                className="h-4 w-4"
+              />
+              Nur Lücken
+            </label>
+            <label className="flex items-center gap-1.5 text-[12px] text-slate-600">
+              <input
+                type="checkbox"
+                checked={vergangeneAus}
+                onChange={(e) => toggleVergangene(e.target.checked)}
+                className="h-4 w-4"
+              />
+              Vergangene aus
+            </label>
+          </div>
         </div>
 
         {sichtbareDays.length === 0 ? (
@@ -325,7 +411,7 @@ export default function MatrixTabelle({
           </div>
         ) : (
           <div className="space-y-2.5">
-            {sichtbareDays.map((d) => {
+            {sichtbareDays.map((d, i) => {
               const zu: string[] = [];
               const ab: string[] = [];
               const offen: string[] = [];
@@ -338,11 +424,22 @@ export default function MatrixTabelle({
               }
               const need = team?.spielstaerke ?? 0;
               const ok = zu.length >= need;
+              const vorbei = istVorbei(d);
+              const divider = i === ersterKommendIdx && ersterKommendIdx > 0;
               return (
+                <div key={d.id}>
+                  {divider && (
+                    <div className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                      <span className="h-px flex-1 bg-primary/30" />
+                      ab hier kommende Spiele
+                      <span className="h-px flex-1 bg-primary/30" />
+                    </div>
+                  )}
                 <a
-                  key={d.id}
                   href={`/spieltag/${d.id}`}
-                  className="block rounded-xl border border-slate-200 bg-white p-3 hover:border-primary"
+                  className={`block rounded-xl border border-slate-200 bg-white p-3 hover:border-primary ${
+                    vorbei ? "opacity-60" : ""
+                  }`}
                 >
                   <div className="flex items-start gap-2">
                     <div className="mr-auto">
@@ -371,6 +468,7 @@ export default function MatrixTabelle({
                     <NameZeile farbe="bg-rose-500" label="Abgesagt" namen={ab} />
                   </div>
                 </a>
+                </div>
               );
             })}
           </div>

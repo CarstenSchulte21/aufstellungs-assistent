@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -99,6 +99,23 @@ export default function MeineSpieltageClient({
   const [eVon, setEVon] = useState("");
   const [eBis, setEBis] = useState("");
   const [eGrund, setEGrund] = useState("");
+  const [vergangeneAn, setVergangeneAn] = useState(false);
+
+  useEffect(() => {
+    try {
+      setVergangeneAn(localStorage.getItem("meine_vergangene_an") === "1");
+    } catch {
+      /* ignorieren */
+    }
+  }, []);
+  function toggleVergangene(v: boolean) {
+    setVergangeneAn(v);
+    try {
+      localStorage.setItem("meine_vergangene_an", v ? "1" : "0");
+    } catch {
+      /* ignorieren */
+    }
+  }
 
   function startEdit(a: AbwRow) {
     setEditId(a.id);
@@ -204,6 +221,12 @@ export default function MeineSpieltageClient({
   }
   aufgaben.sort((x, y) => (x.datum < y.datum ? -1 : x.datum > y.datum ? 1 : 0));
 
+  // Vergangene Spieltage standardmäßig aus; Schalter holt sie ausgegraut zurück.
+  const sichtbareSpieltage = vergangeneAn
+    ? spieltage
+    : spieltage.filter((s) => s.datum >= h);
+  const ersterKommendIdx = sichtbareSpieltage.findIndex((s) => s.datum >= h);
+
   return (
     <div className="space-y-6">
       {proxyOpts.length > 1 && (
@@ -253,22 +276,37 @@ export default function MeineSpieltageClient({
 
       {/* Spieltage */}
       <section>
-        <h2 className="mb-2 text-[15px] font-bold text-slate-800">
-          Kommende Spieltage
-        </h2>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="text-[15px] font-bold text-slate-800">Spieltage</h2>
+          <label className="flex items-center gap-1.5 text-[12px] text-slate-600">
+            <input
+              type="checkbox"
+              checked={vergangeneAn}
+              onChange={(e) => toggleVergangene(e.target.checked)}
+              className="h-4 w-4"
+            />
+            Vergangene anzeigen
+          </label>
+        </div>
         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
-          {spieltage.length === 0 && (
+          {sichtbareSpieltage.length === 0 && (
             <p className="p-4 text-sm text-slate-500">
-              Keine Spieltage gefunden.
+              {vergangeneAn
+                ? "Keine Spieltage gefunden."
+                : "Keine kommenden Spieltage."}
             </p>
           )}
-          {spieltage.map((s) => {
+          {sichtbareSpieltage.map((s, i) => {
             const ui = STATUS_UI[s.status] ?? STATUS_UI.nicht_angefragt;
+            const sVorbei = s.datum < h;
+            const divider = i === ersterKommendIdx && ersterKommendIdx > 0;
             return (
               <div
                 key={s.id}
                 id={`s-${s.id}`}
-                className="flex scroll-mt-4 flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3"
+                className={`flex scroll-mt-4 flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3 ${
+                  sVorbei ? "opacity-60" : ""
+                } ${divider ? "border-t-2 border-primary" : ""}`}
               >
                 <div className="min-w-0 sm:mr-auto">
                   <div className="text-sm font-medium text-slate-900">
