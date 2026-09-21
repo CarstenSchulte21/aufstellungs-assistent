@@ -70,8 +70,9 @@ export async function ladeTeamKalender(
   return { name: `TT ${teamName}`, events };
 }
 
-// Persönlicher Kalender: alle Spiele der Stamm-Mannschaft PLUS Spiele, für die
-// der Spieler als Ersatz eingeplant ist (auch anderer Mannschaften).
+// Persönlicher Kalender: alle Spiele der Stamm-Mannschaft PLUS jedes Spiel, dem
+// der Spieler zugesagt hat oder für das er als Ersatz eingeplant ist (auch
+// anderer Mannschaften) — deckt sich mit der Liste unter „Meine Spieltage".
 export async function ladeSpielerKalender(
   supabase: SupabaseClient,
   spielerId: string
@@ -101,6 +102,16 @@ export async function ladeSpielerKalender(
     .eq("spieler_id", spielerId);
   for (const e of eins ?? [])
     if ((e as any).spiel_id) spielIds.add((e as any).spiel_id);
+
+  // 3) Zusagen (auch Aushilfen in anderen Mannschaften, die noch nicht fest
+  //    eingeplant sind) — auf die laufende Halbserie beschränkt.
+  const { data: zus } = await supabase
+    .from("verfuegbarkeiten")
+    .select("spiel_id, spiele:spiel_id(halbserie_id)")
+    .eq("spieler_id", spielerId)
+    .eq("status", "zugesagt");
+  for (const v of (zus ?? []) as any[])
+    if (v.spiel_id && v.spiele?.halbserie_id === hs) spielIds.add(v.spiel_id);
 
   if (spielIds.size === 0) return { name: "TT: Meine Spiele", events: [] };
 
