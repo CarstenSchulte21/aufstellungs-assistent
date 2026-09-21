@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type StilleSpieler = {
   name: string;
-  letzteAnmeldung: string | null; // ISO oder null = nie
+  letzteAktivitaet: string | null; // ISO oder null = nie aktiv
 };
 
 export type Adoption = {
@@ -15,10 +15,10 @@ export type Adoption = {
   mitTelegram: number;
   mitEmail: number;
   ohneKanal: number;
-  angemeldet30: number; // Konten mit Anmeldung in den letzten 30 Tagen
-  nieAngemeldet: number; // verknüpfte Konten, die sich nie angemeldet haben
-  laenger30: number; // verknüpft, aber >30 Tage keine Anmeldung
-  stille: StilleSpieler[]; // verknüpft + nie/lange nicht angemeldet
+  aktiv30: number; // Konten, die in den letzten 30 Tagen aktiv waren
+  nieAktiv: number; // verknüpfte Konten ohne jede Aktivität
+  laenger30: number; // verknüpft, aber >30 Tage keine Aktivität
+  stille: StilleSpieler[]; // verknüpft + nie/lange nicht aktiv
 };
 
 export async function ladeAdoption(admin: SupabaseClient): Promise<Adoption> {
@@ -29,26 +29,33 @@ export async function ladeAdoption(admin: SupabaseClient): Promise<Adoption> {
 
   const { data: benutzer } = await admin
     .from("benutzer")
-    .select("id, spieler_id");
-  const kontoVonSpieler = new Map<string, string>(); // spieler_id -> benutzer_id
+    .select("id, spieler_id, letzte_aktivitaet_am");
+  // spieler_id -> { benutzer_id, aktivAm }
+  const kontoVonSpieler = new Map<
+    string,
+    { id: string; aktivAm: string | null }
+  >();
   for (const b of (benutzer ?? []) as any[])
-    if (b.spieler_id) kontoVonSpieler.set(b.spieler_id, b.id);
+    if (b.spieler_id)
+      kontoVonSpieler.set(b.spieler_id, {
+        id: b.id,
+        aktivAm: b.letzte_aktivitaet_am ?? null,
+      });
 
-  // Letzte Anmeldung je Konto aus dem Auth-System
+  // Letzte Anmeldung je Konto (nur Rückfall, falls noch keine Aktivität erfasst)
   const { data: userList } = await admin.auth.admin.listUsers({ perPage: 200 });
-  const letzteVon = new Map<string, string | null>();
+  const anmeldungVon = new Map<string, string | null>();
   for (const u of (userList?.users ?? []) as any[])
-    letzteVon.set(u.id, u.last_sign_in_at ?? null);
+    anmeldungVon.set(u.id, u.last_sign_in_at ?? null);
 
-  const jetzt = Date.now();
-  const grenze30 = jetzt - 30 * 24 * 3600 * 1000;
+  const grenze30 = Date.now() - 30 * 24 * 3600 * 1000;
 
   let mitKonto = 0;
   let mitTelegram = 0;
   let mitEmail = 0;
   let ohneKanal = 0;
-  let angemeldet30 = 0;
-  let nieAngemeldet = 0;
+  let aktiv30 = 0;
+  let nieAktiv = 0;
   let laenger30 = 0;
   const stille: StilleSpieler[] = [];
 
@@ -59,27 +66,28 @@ export async function ladeAdoption(admin: SupabaseClient): Promise<Adoption> {
     if (hatMail) mitEmail++;
     if (!hatTelegram && !hatMail) ohneKanal++;
 
-    const kontoId = kontoVonSpieler.get(s.id);
-    if (!kontoId) continue; // kein verknüpftes Konto
+    const konto = kontoVonSpieler.get(s.id);
+    if (!konto) continue; // kein verknüpftes Konto
     mitKonto++;
 
-    const letzte = letzteVon.get(kontoId) ?? null;
+    // Echte Aktivität bevorzugen, ersatzweise die letzte Anmeldung
+    const letzte = konto.aktivAm ?? anmeldungVon.get(konto.id) ?? null;
     if (!letzte) {
-      nieAngemeldet++;
-      stille.push({ name: s.name, letzteAnmeldung: null });
+      nieAktiv++;
+      stille.push({ name: s.name, letzteAktivitaet: null });
     } else if (Date.parse(letzte) >= grenze30) {
-      angemeldet30++;
+      aktiv30++;
     } else {
       laenger30++;
-      stille.push({ name: s.name, letzteAnmeldung: letzte });
+      stille.push({ name: s.name, letzteAktivitaet: letzte });
     }
   }
 
-  // Stille zuletzt: nie angemeldet zuerst, dann nach ältester Anmeldung
+  // Stille zuletzt: nie aktiv zuerst, dann nach ältester Aktivität
   stille.sort((a, b) => {
-    if (!a.letzteAnmeldung && b.letzteAnmeldung) return -1;
-    if (a.letzteAnmeldung && !b.letzteAnmeldung) return 1;
-    return (a.letzteAnmeldung ?? "").localeCompare(b.letzteAnmeldung ?? "");
+    if (!a.letzteAktivitaet && b.letzteAktivitaet) return -1;
+    if (a.letzteAktivitaet && !b.letzteAktivitaet) return 1;
+    return (a.letzteAktivitaet ?? "").localeCompare(b.letzteAktivitaet ?? "");
   });
 
   return {
@@ -89,8 +97,8 @@ export async function ladeAdoption(admin: SupabaseClient): Promise<Adoption> {
     mitTelegram,
     mitEmail,
     ohneKanal,
-    angemeldet30,
-    nieAngemeldet,
+    aktiv30,
+    nieAktiv,
     laenger30,
     stille,
   };

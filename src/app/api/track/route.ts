@@ -31,7 +31,15 @@ export async function POST(req: Request): Promise<Response> {
   const rolle = session.modus; // admin | mf | spieler (aggregiert)
 
   try {
-    await getAdmin().from("seitenaufrufe").insert({ pfad, rolle });
+    const admin = getAdmin();
+    // anonymer Seitenaufruf (kein Personenbezug)
+    await admin.from("seitenaufrufe").insert({ pfad, rolle });
+    // „zuletzt aktiv" des Kontos aktualisieren (misst echte Nutzung, nicht nur
+    // Neuanmeldungen) — separater, personenbezogener Zeitstempel.
+    await admin
+      .from("benutzer")
+      .update({ letzte_aktivitaet_am: new Date().toISOString() })
+      .eq("id", session.userId);
   } catch {
     // Statistik ist optional — Fehler nie an den Nutzer durchreichen.
   }

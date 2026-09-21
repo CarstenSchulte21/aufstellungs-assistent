@@ -104,33 +104,30 @@ export default async function StatistikPage() {
         {/* Anmelde-Aktivität */}
         <section className="rounded-xl border border-slate-200 bg-white p-4">
           <h2 className="mb-1 text-[15px] font-bold text-slate-800">
-            Anmelde-Aktivität
+            Nutzungs-Aktivität
           </h2>
           <p className="mb-3 text-[12px] text-slate-500">
-            Bezogen auf verknüpfte Konten ({adoption.mitKonto}).
+            Zuletzt aktiv (echte Seitennutzung; ersatzweise letzte Anmeldung),
+            bezogen auf verknüpfte Konten ({adoption.mitKonto}).
           </p>
           <div className="grid grid-cols-3 gap-3">
-            <Kennzahl
-              label="aktiv (30 Tage)"
-              wert={adoption.angemeldet30}
-              ton="ok"
-            />
+            <Kennzahl label="aktiv (30 Tage)" wert={adoption.aktiv30} ton="ok" />
             <Kennzahl
               label="länger als 30 Tage"
               wert={adoption.laenger30}
               ton={adoption.laenger30 > 0 ? "warn" : "ok"}
             />
             <Kennzahl
-              label="nie angemeldet"
-              wert={adoption.nieAngemeldet}
-              ton={adoption.nieAngemeldet > 0 ? "warn" : "ok"}
+              label="nie aktiv"
+              wert={adoption.nieAktiv}
+              ton={adoption.nieAktiv > 0 ? "warn" : "ok"}
             />
           </div>
 
           {adoption.stille.length > 0 && (
             <div className="mt-4">
               <div className="mb-1 text-[12px] font-semibold text-slate-500">
-                Stille Nutzer (nie oder lange nicht angemeldet)
+                Stille Nutzer (nie oder lange nicht aktiv)
               </div>
               <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
                 {adoption.stille.map((s) => (
@@ -140,7 +137,7 @@ export default async function StatistikPage() {
                   >
                     <span className="text-slate-700">{s.name}</span>
                     <span className="text-slate-400">
-                      {fmtDatum(s.letzteAnmeldung)}
+                      {fmtDatum(s.letzteAktivitaet)}
                     </span>
                   </li>
                 ))}
