@@ -138,11 +138,11 @@ export default function MeineSpieltageClient({
   }
 
   async function updateAbw(id: string) {
-    if (!eVon || !eBis) return;
+    if (!eVon || !eBis || !eGrund.trim()) return;
     setBusy(id);
     await supabase
       .from("abwesenheiten")
-      .update({ von: eVon, bis: eBis, grund: eGrund || null })
+      .update({ von: eVon, bis: eBis, grund: eGrund.trim() })
       .eq("id", id);
     setEditId(null);
     setBusy(null);
@@ -161,13 +161,13 @@ export default function MeineSpieltageClient({
 
   async function addAbw(e: React.FormEvent) {
     e.preventDefault();
-    if (!von || !bis) return;
+    if (!von || !bis || !grund.trim()) return;
     setBusy("abw");
     await supabase.from("abwesenheiten").insert({
       spieler_id: zielId,
       von,
       bis,
-      grund: grund || null,
+      grund: grund.trim(),
       quelle: "webapp",
     });
     setVon("");
@@ -503,7 +503,11 @@ export default function MeineSpieltageClient({
                     <input
                       type="date"
                       value={eVon}
-                      onChange={(e) => setEVon(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEVon(v);
+                        if (!eBis || eBis < v) setEBis(v);
+                      }}
                       className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
                     />
                   </label>
@@ -512,6 +516,7 @@ export default function MeineSpieltageClient({
                     <input
                       type="date"
                       value={eBis}
+                      min={eVon || undefined}
                       onChange={(e) => setEBis(e.target.value)}
                       className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
                     />
@@ -523,12 +528,13 @@ export default function MeineSpieltageClient({
                       value={eGrund}
                       onChange={(e) => setEGrund(e.target.value)}
                       placeholder="Urlaub"
+                      required
                       className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
                     />
                   </label>
                   <button
                     onClick={() => updateAbw(a.id)}
-                    disabled={busy === a.id}
+                    disabled={busy === a.id || !eGrund.trim()}
                     className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
                   >
                     Speichern
@@ -577,7 +583,12 @@ export default function MeineSpieltageClient({
               <input
                 type="date"
                 value={von}
-                onChange={(e) => setVon(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setVon(v);
+                  // Bis mitziehen, damit es nie vor Von liegt / dort startet
+                  if (!bis || bis < v) setBis(v);
+                }}
                 required
                 className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
               />
@@ -587,24 +598,26 @@ export default function MeineSpieltageClient({
               <input
                 type="date"
                 value={bis}
+                min={von || undefined}
                 onChange={(e) => setBis(e.target.value)}
                 required
                 className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
               />
             </label>
             <label className="text-[12px] text-slate-600">
-              Grund (optional)
+              Grund
               <input
                 type="text"
                 value={grund}
                 onChange={(e) => setGrund(e.target.value)}
                 placeholder="Urlaub"
+                required
                 className="mt-1 block rounded-lg border border-slate-300 px-2 py-1 text-sm"
               />
             </label>
             <button
               type="submit"
-              disabled={busy === "abw"}
+              disabled={busy === "abw" || !von || !bis || !grund.trim()}
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
             >
               Hinzufügen
