@@ -103,6 +103,36 @@ export default async function MeineSpieltagePage({
     }));
   }
 
+  // Aushilfe-Einsätze in ANDEREN Mannschaften, denen der Spieler zugesagt hat
+  // (bzw. unsicher ist) — damit alle eigenen Spiele an einem Ort stehen.
+  const { data: fremd } = await supabase
+    .from("verfuegbarkeiten")
+    .select(
+      "spiel_id, status, kommentar, spiele:spiel_id(spieltag_nr, datum, uhrzeit, heim, gegner, mannschaft_id, halbserie_id, mannschaften:mannschaft_id(nummer, name))"
+    )
+    .eq("spieler_id", zielId)
+    .in("status", ["zugesagt", "unsicher"]);
+  const eigeneIds = new Set(spieltage.map((s) => s.id));
+  for (const v of (fremd ?? []) as any[]) {
+    const sp = v.spiele;
+    if (!sp || sp.halbserie_id !== halbserieId) continue;
+    if (stamm?.mannschaft_id && sp.mannschaft_id === stamm.mannschaft_id) continue;
+    if (eigeneIds.has(v.spiel_id)) continue;
+    spieltage.push({
+      id: v.spiel_id,
+      spieltag_nr: sp.spieltag_nr,
+      datum: sp.datum,
+      uhrzeit: sp.uhrzeit ?? null,
+      heim: sp.heim,
+      gegner: sp.gegner,
+      status: v.status,
+      kommentar: v.kommentar ?? null,
+      fremd: true,
+      teamName: sp.mannschaften?.name ?? `${sp.mannschaften?.nummer ?? "?"}. Mannschaft`,
+    });
+  }
+  spieltage.sort((a, b) => a.datum.localeCompare(b.datum));
+
   const { data: abw } = await supabase
     .from("abwesenheiten")
     .select("id, von, bis, grund")
@@ -117,7 +147,7 @@ export default async function MeineSpieltagePage({
       "id, status, frist_bis, spiel_datum, spiele:spiel_id(spieltag_nr, datum, uhrzeit, heim, gegner, mannschaften:mannschaft_id(nummer, name))"
     )
     .eq("spieler_id", zielId)
-    .in("status", ["freigegeben", "gesendet", "zugesagt", "abgelehnt", "eingeplant"])
+    .in("status", ["freigegeben", "gesendet"])
     .order("spiel_datum", { ascending: true });
   const ersatzanfragen: ErsatzRow[] = (ers ?? []).map((a: any) => ({
     id: a.id,

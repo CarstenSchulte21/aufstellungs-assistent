@@ -14,6 +14,8 @@ export type SpieltagRow = {
   gegner: string;
   status: string;
   kommentar: string | null;
+  fremd?: boolean; // Aushilfe in einer anderen Mannschaft
+  teamName?: string; // Name der Mannschaft (bei Aushilfe)
 };
 export type AbwRow = { id: string; von: string; bis: string; grund: string | null };
 export type ErsatzRow = {
@@ -190,6 +192,7 @@ export default function MeineSpieltageClient({
   const aufgaben: Aufgabe[] = [];
   for (const s of spieltage) {
     if (s.datum < h) continue;
+    if (s.fremd) continue; // Aushilfen werden über die Ersatzanfrage geregelt
     const gegen = `${s.heim ? "Heim" : "Auswärts"} gegen ${s.gegner}`;
     if (OFFEN_STATUS.includes(s.status))
       aufgaben.push({
@@ -315,9 +318,14 @@ export default function MeineSpieltageClient({
                   </div>
                   <div className="truncate text-[13px] text-slate-600">
                     {s.heim ? "Heim" : "Auswärts"} gegen {s.gegner}
+                    {s.fremd && (
+                      <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700">
+                        Aushilfe · {s.teamName}
+                      </span>
+                    )}
                   </div>
                   <div className="text-[12px] text-slate-500">
-                    Spieltag {s.spieltag_nr}
+                    {s.fremd ? "Aushilfe-Einsatz" : `Spieltag ${s.spieltag_nr}`}
                     <span
                       className={`ml-2 rounded px-1.5 py-0.5 font-semibold ${ui.cls}`}
                     >
@@ -328,30 +336,36 @@ export default function MeineSpieltageClient({
                     )}
                   </div>
                 </div>
-                <div className="flex flex-none gap-2">
-                  <button
-                    onClick={() => antwort(s.id, "zugesagt")}
-                    disabled={busy === s.id}
-                    className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold sm:flex-none ${
-                      s.status === "zugesagt"
-                        ? "bg-emerald-500 text-white"
-                        : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                    }`}
-                  >
-                    ✓ Zusagen
-                  </button>
-                  <button
-                    onClick={() => antwort(s.id, "abgesagt")}
-                    disabled={busy === s.id}
-                    className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold sm:flex-none ${
-                      s.status === "abgesagt"
-                        ? "bg-rose-500 text-white"
-                        : "border border-rose-300 text-rose-600 hover:bg-rose-50"
-                    }`}
-                  >
-                    ✕ Absagen
-                  </button>
-                </div>
+                {s.fremd ? (
+                  <div className="flex flex-none items-center text-[12px] text-slate-400">
+                    über Ersatzanfrage
+                  </div>
+                ) : (
+                  <div className="flex flex-none gap-2">
+                    <button
+                      onClick={() => antwort(s.id, "zugesagt")}
+                      disabled={busy === s.id}
+                      className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold sm:flex-none ${
+                        s.status === "zugesagt"
+                          ? "bg-emerald-500 text-white"
+                          : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                      }`}
+                    >
+                      ✓ Zusagen
+                    </button>
+                    <button
+                      onClick={() => antwort(s.id, "abgesagt")}
+                      disabled={busy === s.id}
+                      className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold sm:flex-none ${
+                        s.status === "abgesagt"
+                          ? "bg-rose-500 text-white"
+                          : "border border-rose-300 text-rose-600 hover:bg-rose-50"
+                      }`}
+                    >
+                      ✕ Absagen
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
