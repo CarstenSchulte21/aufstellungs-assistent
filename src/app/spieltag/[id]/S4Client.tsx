@@ -32,6 +32,7 @@ type Spiel = {
   uhrzeit?: string | null;
   heim: boolean;
   gegner: string;
+  ort?: string | null;
   teamName: string;
   need: number;
 };
@@ -195,6 +196,17 @@ export default function S4Client({
                 {spiel.uhrzeit ? ` · ${spiel.uhrzeit.slice(0, 5)} Uhr` : ""} ·{" "}
                 {spiel.teamName} · benötigt {spiel.need} Spieler
               </p>
+              {spiel.ort && (
+                <p className="mt-1 flex items-start gap-1 text-[13px] text-slate-600">
+                  <span aria-hidden>📍</span>
+                  <span>
+                    {spiel.ort}
+                    <span className="ml-1 text-[11px] italic text-slate-400">
+                      (ohne Gewähr)
+                    </span>
+                  </span>
+                </p>
+              )}
             </div>
             <div
               className={`rounded-lg px-3 py-2 text-center ${
