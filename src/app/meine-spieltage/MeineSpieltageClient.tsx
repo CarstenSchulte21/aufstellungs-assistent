@@ -317,14 +317,32 @@ export default function MeineSpieltageClient({
                     {s.uhrzeit ? ` · ${s.uhrzeit.slice(0, 5)}` : ""}
                   </div>
                   <div className="truncate text-[13px] text-slate-600">
-                    {s.heim ? "Heim" : "Auswärts"} gegen {s.gegner}
+                    {s.teamName ? (
+                      s.heim ? (
+                        <>
+                          <strong className="text-slate-800">{s.teamName}</strong>{" "}
+                          gegen {s.gegner}
+                        </>
+                      ) : (
+                        <>
+                          {s.gegner} gegen{" "}
+                          <strong className="text-slate-800">{s.teamName}</strong>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        {s.heim ? "Heim" : "Auswärts"} gegen {s.gegner}
+                      </>
+                    )}
                     {s.fremd && (
                       <span className="ml-2 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-semibold text-blue-700">
-                        Aushilfe · {s.teamName}
+                        Aushilfe
                       </span>
                     )}
                   </div>
                   <div className="text-[12px] text-slate-500">
+                    {s.heim ? "Heim" : "Auswärts"}
+                    {" · "}
                     {s.fremd ? "Aushilfe-Einsatz" : `Spieltag ${s.spieltag_nr}`}
                     <span
                       className={`ml-2 rounded px-1.5 py-0.5 font-semibold ${ui.cls}`}

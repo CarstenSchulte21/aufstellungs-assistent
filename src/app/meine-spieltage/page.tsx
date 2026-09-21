@@ -68,11 +68,12 @@ export default async function MeineSpieltagePage({
   // Stamm-Mannschaft des Zielspielers (operative Ebene, nicht Meldung)
   const { data: stamm } = await supabase
     .from("kader_zuordnung")
-    .select("mannschaft_id")
+    .select("mannschaft_id, mannschaften:mannschaft_id(name)")
     .eq("spieler_id", zielId)
     .eq("halbserie_id", halbserieId)
     .eq("rolle", "stamm")
     .maybeSingle();
+  const stammTeamName = (stamm as any)?.mannschaften?.name ?? null;
 
   let spieltage: SpieltagRow[] = [];
   if (stamm?.mannschaft_id) {
@@ -100,6 +101,7 @@ export default async function MeineSpieltagePage({
       gegner: s.gegner,
       status: (vMap.get(s.id) as any)?.status ?? "nicht_angefragt",
       kommentar: (vMap.get(s.id) as any)?.kommentar ?? null,
+      teamName: stammTeamName ?? undefined,
     }));
   }
 
