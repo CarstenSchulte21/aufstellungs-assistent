@@ -113,6 +113,17 @@ export async function ladeSpielerKalender(
   for (const v of (zus ?? []) as any[])
     if (v.spiel_id && v.spiele?.halbserie_id === hs) spielIds.add(v.spiel_id);
 
+  // 4) Eigene Absagen wieder herausnehmen — Spiele, für die der Spieler
+  //    abgesagt hat (oder anderweitig verplant ist), gehören nicht in seinen
+  //    Kalender, auch wenn es Spiele seiner Stamm-Mannschaft sind.
+  const { data: abg } = await supabase
+    .from("verfuegbarkeiten")
+    .select("spiel_id, spiele:spiel_id(halbserie_id)")
+    .eq("spieler_id", spielerId)
+    .in("status", ["abgesagt", "extern_verplant"]);
+  for (const v of (abg ?? []) as any[])
+    if (v.spiel_id && v.spiele?.halbserie_id === hs) spielIds.delete(v.spiel_id);
+
   if (spielIds.size === 0) return { name: "TT: Meine Spiele", events: [] };
 
   const { data: spiele } = await supabase
